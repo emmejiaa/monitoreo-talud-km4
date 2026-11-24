@@ -1,0 +1,10 @@
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# APK compilados (se regeneran con flutter build apk)
+*.apk
+
+# Compilados del firmware
+firmware/build/

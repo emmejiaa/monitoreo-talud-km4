@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monitoreo Km 4</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0; padding: 20px; background: #f0f3f5; color: #222;
+    }
+    h1 {
+      text-align: center; color: #1F4F70; margin: 0 0 20px;
+      font-size: 22px;
+    }
+    .status {
+      max-width: 700px; margin: 0 auto 20px; padding: 24px;
+      border-radius: 10px; text-align: center; color: white;
+      font-size: 22px; font-weight: 700; letter-spacing: 0.5px;
+      transition: background 0.3s;
+    }
+    .status.n { background: #888; }
+    .status.v { background: #2E7D4F; }
+    .status.a { background: #E5A000; }
+    .status.r { background: #D64545; animation: pulse 0.6s infinite; }
+    @keyframes pulse { 50% { opacity: 0.7; } }
+    .sensores {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px; max-width: 700px; margin: 0 auto;
+    }
+    .card {
+      background: white; padding: 16px; border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .card h3 {
+      margin: 0 0 6px; color: #555; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      font-weight: 600;
+    }
+    .card.off .valor, .card.off .delta { color: #bbb; }
+    .valor {
+      font-size: 32px; font-weight: 700; color: #1F4F70;
+      line-height: 1;
+    }
+    .unidad { font-size: 14px; color: #888; margin-left: 4px; }
+    .delta { font-size: 11px; color: #888; margin-top: 4px; }
+    .crudo { font-size: 11px; color: #aaa; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .stale .valor, .stale .delta, .stale .crudo { color: #bbb; }
+    .boton {
+      display: block; margin: 20px auto 0; padding: 14px 28px;
+      background: #1F4F70; color: white; border: none;
+      border-radius: 8px; font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: background 0.2s;
+      max-width: 700px; width: 100%;
+    }
+    .boton:hover { background: #163a52; }
+    .boton:active { transform: scale(0.98); }
+    .boton:disabled { background: #9aa9b4; cursor: default; }
+    .boton.sec { margin-top: 12px; background: white; color: #1F4F70; border: 1px solid #1F4F70; }
+    .boton.sec:hover { background: #eef3f6; }
+    .pie {
+      text-align: center; margin-top: 24px; font-size: 11px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sistema de monitoreo — Km 4</h1>
+  <div id="status" class="status n">SIN CONEXIÓN — pulse "Conectar Arduino"</div>
+  <div class="sensores">
+    <div class="card" id="cardHum">
+      <h3>Humedad del suelo</h3>
+      <span class="valor" id="humedad">--</span><span class="unidad">%</span>
+      <div class="delta" id="dhum">Δ -- %</div>
+      <div class="crudo" id="hraw">lectura cruda: --</div>
+    </div>
+    <div class="card" id="cardInc">
+      <h3>Inclinación del talud</h3>
+      <span class="valor" id="inclinacion">--</span><span class="unidad">°</span>
+      <div class="delta" id="dinc">Δ -- °</div>
+    </div>
+    <div class="card" id="cardDis">
+      <h3>Desplazamiento</h3>
+      <span class="valor" id="desplazamiento">--</span><span class="unidad">mm</span>
+      <div class="delta" id="ddis">Δ -- mm</div>
+      <div class="crudo" id="draw">lectura cruda: --</div>
+    </div>
+  </div>
+  <button class="boton" id="btnConectar" onclick="conectar()">Conectar Arduino</button>
+  <button class="boton" id="btnReset" onclick="reiniciar()" disabled>Reiniciar línea base</button>
+  <button class="boton sec" id="btnSonido" onclick="alternarSonido()">Sonido de alertas: activado</button>
+  <div class="pie">Prototipo Km 4 — Proyecto Integrado en Ingeniería · Abrir en Chrome o Edge</div>
+
+  <script>
+    const estados = [
+      { clase: 'v', texto: 'ESTADO: NORMAL' },
+      { clase: 'a', texto: 'ALERTA AMARILLA — Vigilar' },
+      { clase: 'r', texto: 'ALERTA ROJA — Riesgo inminente' }
+    ];
+
+    let writer = null;
+    let conectadoDesde = 0;
+    let ultimoDato = 0;
+
+    let audioCtx = null;
+    let sonidoActivo = true;
+    let nivelSonando = 0;
+    let timerRojo = null;
+
+    // El navegador solo deja sonar audio después de un clic, por eso esto se
+    // llama al pulsar "Conectar Arduino" o el botón de sonido
+    function prepararAudio() {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        audioCtx = new Ctx();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function campana(frec, retraso) {
+      const t0 = audioCtx.currentTime + retraso;
+      [[frec, 0.18, 1.4], [frec * 2, 0.04, 0.7]].forEach(([f, vol, dur]) => {
+        const osc = audioCtx.createOscillator();
+        const gan = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = f;
+        gan.gain.setValueAtTime(0.0001, t0);
+        gan.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
+        gan.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(gan);
+        gan.connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + dur + 0.05);
+      });
+    }
+
+    function sonarAmarillo() {
+      if (!sonidoActivo || !audioCtx) return;
+      campana(659.25, 0);
+      campana(880, 0.25);
+    }
+
+    function sonarRojo() {
+      if (!sonidoActivo || !audioCtx) return;
+      campana(880, 0);
+      campana(698.46, 0.22);
+      campana(587.33, 0.44);
+    }
+
+    function actualizarSonido(nivel) {
+      if (nivel === nivelSonando) return;
+      clearInterval(timerRojo);
+      timerRojo = null;
+      if (nivel === 2) {
+        sonarRojo();
+        timerRojo = setInterval(sonarRojo, 2500);
+      } else if (nivel === 1 && nivelSonando === 0) {
+        sonarAmarillo();
+      }
+      nivelSonando = nivel;
+    }
+
+    function detenerAlertas() {
+      clearInterval(timerRojo);
+      timerRojo = null;
+      nivelSonando = 0;
+    }
+
+    function alternarSonido() {
+      prepararAudio();
+      sonidoActivo = !sonidoActivo;
+      document.getElementById('btnSonido').textContent =
+        'Sonido de alertas: ' + (sonidoActivo ? 'activado' : 'silenciado');
+      if (sonidoActivo) sonarAmarillo();
+    }
+
+    function mostrar(d) {
+      ultimoDato = Date.now();
+      document.body.classList.remove('stale');
+      document.getElementById('hraw').textContent = 'lectura cruda: ' + d.hum_raw;
+      document.getElementById('draw').textContent = 'lectura cruda: ' + d.dis_raw;
+      document.getElementById('humedad').textContent = d.hum.toFixed(1);
+      document.getElementById('desplazamiento').textContent = d.dis.toFixed(2);
+      document.getElementById('dhum').textContent = 'Δ ' + d.dhum.toFixed(1) + ' %';
+      document.getElementById('ddis').textContent = 'Δ ' + d.ddis.toFixed(2) + ' mm';
+
+      const cardInc = document.getElementById('cardInc');
+      if (d.inc_ok) {
+        document.getElementById('inclinacion').textContent = d.inc.toFixed(2);
+        document.getElementById('dinc').textContent = 'Δ ' + d.dinc.toFixed(2) + ' °';
+        cardInc.classList.remove('off');
+      } else {
+        document.getElementById('inclinacion').textContent = 'N/D';
+        document.getElementById('dinc').textContent = 'sensor no conectado';
+        cardInc.classList.add('off');
+      }
+
+      const s = document.getElementById('status');
+      s.className = 'status ' + estados[d.a].clase;
+      s.textContent = estados[d.a].texto;
+      actualizarSonido(d.a);
+    }
+
+    function sinConexion(msg) {
+      detenerAlertas();
+      const s = document.getElementById('status');
+      s.className = 'status n';
+      s.textContent = msg;
+      document.body.classList.add('stale');
+      document.getElementById('btnConectar').disabled = false;
+      document.getElementById('btnReset').disabled = true;
+      writer = null;
+      conectadoDesde = 0;
+      ultimoDato = 0;
+    }
+
+    // Si dejan de llegar datos, no dejar el último estado como si estuviera en vivo.
+    // Antes del primer dato se da más margen: el Arduino se reinicia al abrir el puerto.
+    setInterval(() => {
+      if (!conectadoDesde) return;
+      const ref = ultimoDato || conectadoDesde;
+      const limite = ultimoDato ? 3000 : 8000;
+      if (Date.now() - ref > limite) {
+        const s = document.getElementById('status');
+        s.className = 'status n';
+        s.textContent = 'SIN DATOS — revise la conexión con el Arduino';
+        document.body.classList.add('stale');
+        detenerAlertas();
+      }
+    }, 500);
+
+    async function conectar() {
+      prepararAudio();
+      if (!('serial' in navigator)) {
+        alert('Este navegador no soporta Web Serial. Abra la página en Chrome o Edge.');
+        return;
+      }
+      try {
+        const port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600 });
+
+        const encoder = new TextEncoderStream();
+        encoder.readable.pipeTo(port.writable);
+        writer = encoder.writable.getWriter();
+
+        const decoder = new TextDecoderStream();
+        port.readable.pipeTo(decoder.writable);
+        const reader = decoder.readable.getReader();
+
+        document.getElementById('btnConectar').disabled = true;
+        document.getElementById('btnReset').disabled = false;
+        document.getElementById('status').textContent = 'Conectado — esperando datos...';
+        conectadoDesde = Date.now();
+
+        let buffer = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += value;
+          let i;
+          while ((i = buffer.indexOf('\n')) >= 0) {
+            const linea = buffer.slice(0, i).trim();
+            buffer = buffer.slice(i + 1);
+            if (linea.startsWith('{')) {
+              let d = null;
+              try { d = JSON.parse(linea); } catch (e) { /* línea incompleta */ }
+              if (d && typeof d.a === 'number') mostrar(d);
+              else if (d) console.log('Arduino:', linea);
+            } else if (linea) {
+              console.log('Arduino:', linea);
+            }
+          }
+        }
+        sinConexion('SIN CONEXIÓN — se desconectó el Arduino. Recargue la página (F5) y vuelva a conectar');
+      } catch (e) {
+        console.error(e);
+        if (conectadoDesde) {
+          sinConexion('SIN CONEXIÓN — se desconectó el Arduino. Recargue la página (F5) y vuelva a conectar');
+        } else {
+          sinConexion('SIN CONEXIÓN — ' + (e.message || 'error al conectar'));
+        }
+      }
+    }
+
+    async function reiniciar() {
+      if (!writer) return;
+      try { await writer.write('r\n'); }
+      catch (e) { alert('Error reiniciando'); }
+    }
+  </script>
+</body>
+</html>
