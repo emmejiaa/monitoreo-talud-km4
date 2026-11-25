@@ -19,10 +19,10 @@ Las alertas no dependen del valor absoluto sino de **cuánto cambió cada sensor
 | Sensor | Amarilla | Roja | Nota |
 |---|---|---|---|
 | Humedad | +15 % | +25 % | Solo cuenta cuando sube |
-| Inclinación | 2,5° | 5° | Cambio en cualquier sentido |
+| Inclinación | 2,5° | 5° | Ángulo entre la posición de referencia y la actual, en cualquier dirección |
 | Desplazamiento | 3 mm | 6 mm | Cambio en cualquier sentido |
 
-Son los valores de fábrica. Se pueden cambiar desde la app sin recompilar y quedan guardados en la EEPROM del Arduino.
+Son los valores de fábrica. Se pueden cambiar desde la app o el dashboard sin recompilar y quedan guardados en la EEPROM del Arduino.
 
 ## Contenido del repositorio
 
@@ -41,11 +41,11 @@ Son los valores de fábrica. Se pueden cambiar desde la app sin recompilar y que
 | LED verde / amarillo / rojo | 2 / 3 / 4 |
 | HC-05 | TXD → 10, RXD → 11 (con divisor 1 kΩ + 2 kΩ) |
 
-El MPU6050 es opcional: si no está conectado, el firmware sigue funcionando y la inclinación aparece como "N/D".
+El MPU6050 se lee directo por I2C, sin librerías, así que también funciona con los GY-521 clon que la librería de Adafruit rechaza. Es opcional: si no está conectado, el firmware sigue funcionando, la inclinación aparece como "N/D" y, si se conecta después o se suelta un cable, se detecta solo en unos segundos.
 
 ## Firmware
 
-1. Instalar Arduino IDE 2.x y la librería **Adafruit MPU6050** (con todas sus dependencias).
+1. Instalar Arduino IDE 2.x. No hace falta ninguna librería adicional.
 2. Abrir `firmware/firmware.ino`, elegir "Arduino Uno" y subir. No hay que cambiarle el nombre a la carpeta: Arduino exige que se llame igual que el `.ino`.
 3. El Monitor Serie va a 9600 baudios con fin de línea "Nueva línea".
 
@@ -55,7 +55,7 @@ Los datos salen como una línea JSON: por USB cada 400 ms y por Bluetooth cada 1
 {"hum":54.00,"inc":0.00,"dis":30.12,"dhum":0.00,"dinc":0.00,"ddis":0.00,"a":0,"inc_ok":false,"hum_raw":557,"dis_raw":513}
 ```
 
-`a` es el nivel de alerta (0 verde, 1 amarilla, 2 roja). Los campos que empiezan por `d` son el cambio respecto a la línea base, e `inc_ok` indica si el MPU6050 respondió.
+`a` es el nivel de alerta (0 verde, 1 amarilla, 2 roja). Los campos que empiezan por `d` son el cambio respecto a la línea base (`dinc` es el ángulo entre la posición de referencia y la actual, siempre positivo), e `inc_ok` indica si el MPU6050 respondió.
 
 Comandos, uno por línea, por USB o por Bluetooth:
 
@@ -70,7 +70,20 @@ Comandos, uno por línea, por USB o por Bluetooth:
 
 ## Dashboard (laptop)
 
-Abrir `firmware/dashboard_serial.html` en Chrome o Edge (usa Web Serial), pulsar "Conectar Arduino" y elegir el puerto. El Monitor Serie del Arduino IDE tiene que estar cerrado.
+Abrir `firmware/dashboard_serial.html` en Chrome o Edge (usa Web Serial) y elegir cómo conectarse:
+
+- **USB**: elegir el puerto COM del Arduino. El Monitor Serie del Arduino IDE tiene que estar cerrado.
+- **Bluetooth**: el HC-05 debe estar emparejado antes en Windows (PIN 1234 o 0000). Recibe una lectura por segundo. El HC-05 acepta una sola conexión, así que mientras la laptop lo use, el celular no puede conectarse.
+- **Modo simulado**: datos de prueba sin Arduino, para mostrarlo o probarlo.
+
+Tiene lo mismo que la app:
+
+- estado, sensores y gráfica de los últimos 3 minutos con las franjas de alerta;
+- sonido en las alertas;
+- calibración del sensor de humedad y cambio de límites;
+- bitácora de eventos.
+
+Si se pierde la conexión, se reconecta solo; con "Desconectar" se puede cambiar de modo sin recargar la página.
 
 ## App Android
 

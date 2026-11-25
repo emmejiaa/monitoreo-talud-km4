@@ -6,68 +6,145 @@
   <title>Monitoreo Km 4</title>
   <style>
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0; padding: 20px; background: #f0f3f5; color: #222;
     }
-    h1 {
-      text-align: center; color: #1F4F70; margin: 0 0 20px;
-      font-size: 22px;
+    .contenedor { max-width: 920px; margin: 0 auto; }
+    h1 { text-align: center; color: #1F4F70; margin: 0 0 6px; font-size: 22px; }
+    h2 { margin: 0; font-size: 16px; color: #1F4F70; }
+    h3 { margin: 18px 0 4px; font-size: 14px; color: #1F4F70; }
+    .via { text-align: center; margin: 0 auto 16px; font-size: 12px; color: #667; min-height: 16px; }
+    .simulado {
+      margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      background: #FFF4D6; border: 1px solid #E5C46B; color: #8A6A00; text-align: center;
     }
     .status {
-      max-width: 700px; margin: 0 auto 20px; padding: 24px;
-      border-radius: 10px; text-align: center; color: white;
-      font-size: 22px; font-weight: 700; letter-spacing: 0.5px;
-      transition: background 0.3s;
+      margin: 0 0 16px; padding: 24px; border-radius: 10px; text-align: center; color: white;
+      font-size: 22px; font-weight: 700; letter-spacing: 0.5px; transition: background 0.3s;
     }
     .status.n { background: #888; }
     .status.v { background: #2E7D4F; }
     .status.a { background: #E5A000; }
     .status.r { background: #D64545; animation: pulse 0.6s infinite; }
     @keyframes pulse { 50% { opacity: 0.7; } }
-    .sensores {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px; max-width: 700px; margin: 0 auto;
-    }
-    .card {
-      background: white; padding: 16px; border-radius: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    .sensores { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .card, .panel {
+      background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
     .card h3 {
-      margin: 0 0 6px; color: #555; font-size: 12px;
-      text-transform: uppercase; letter-spacing: 0.8px;
-      font-weight: 600;
+      margin: 0 0 6px; color: #555; font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.8px; font-weight: 600;
     }
     .card.off .valor, .card.off .delta { color: #bbb; }
-    .valor {
-      font-size: 32px; font-weight: 700; color: #1F4F70;
-      line-height: 1;
-    }
+    .valor { font-size: 32px; font-weight: 700; color: #1F4F70; line-height: 1; }
     .unidad { font-size: 14px; color: #888; margin-left: 4px; }
     .delta { font-size: 11px; color: #888; margin-top: 4px; }
     .crudo { font-size: 11px; color: #aaa; margin-top: 2px; font-variant-numeric: tabular-nums; }
-    .stale .valor, .stale .delta, .stale .crudo { color: #bbb; }
+    .stale .sensores .valor, .stale .sensores .delta, .stale .sensores .crudo { color: #bbb; }
+
+    .grafica { margin-top: 12px; }
+    .grafica-cab { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+    .etiqueta { font-size: 11px; font-weight: 600; letter-spacing: 0.8px; color: #6B7780; text-transform: uppercase; }
+    .segmentos { display: inline-flex; border: 1px solid #1F4F70; border-radius: 999px; overflow: hidden; }
+    .segmentos button {
+      border: 0; background: white; color: #1F4F70; padding: 6px 14px; font-size: 13px; cursor: pointer;
+    }
+    .segmentos button + button { border-left: 1px solid #1F4F70; }
+    .segmentos button.activo { background: #D7E3EC; font-weight: 600; }
+    canvas { display: block; width: 100%; height: 210px; margin-top: 10px; }
+    .pie-grafica { font-size: 12px; color: #6B7780; margin-top: 4px; }
+
     .boton {
-      display: block; margin: 20px auto 0; padding: 14px 28px;
-      background: #1F4F70; color: white; border: none;
-      border-radius: 8px; font-size: 15px; font-weight: 600;
-      cursor: pointer; transition: background 0.2s;
-      max-width: 700px; width: 100%;
+      display: block; margin: 0; padding: 14px 20px; background: #1F4F70; color: white; border: none;
+      border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+      width: 100%;
     }
     .boton:hover { background: #163a52; }
     .boton:active { transform: scale(0.98); }
-    .boton:disabled { background: #9aa9b4; cursor: default; }
-    .boton.sec { margin-top: 12px; background: white; color: #1F4F70; border: 1px solid #1F4F70; }
+    .boton:disabled { background: #9aa9b4; cursor: default; transform: none; }
+    .boton.sec { background: white; color: #1F4F70; border: 1px solid #1F4F70; }
     .boton.sec:hover { background: #eef3f6; }
-    .pie {
-      text-align: center; margin-top: 24px; font-size: 11px;
-      color: #999;
+    .boton.sec:disabled { color: #9aa9b4; border-color: #c8d1d8; background: white; }
+    .fila-botones { display: flex; gap: 12px; margin-top: 16px; }
+    .fila-botones .boton { flex: 1; }
+    @media (max-width: 620px) { .fila-botones { flex-direction: column; } }
+    .ayuda { margin: 10px 0 0; font-size: 12px; color: #777; text-align: center; line-height: 1.5; }
+    .enlace {
+      background: none; border: 0; color: #1F4F70; font-size: 13px; cursor: pointer; padding: 6px 4px;
+      text-decoration: underline;
     }
+    .enlace.peligro { color: #B23A3A; }
+    .enlace:disabled { color: #aab4bb; cursor: default; }
+
+    .paneles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; align-items: start; }
+    @media (max-width: 860px) { .paneles { grid-template-columns: 1fr; } }
+    .panel-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .nota {
+      margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px;
+      background: #FFF4D6; border: 1px solid #E5C46B; color: #5E4800;
+    }
+    .caja-crudo {
+      display: flex; align-items: baseline; gap: 6px; margin-top: 12px; padding: 10px 12px;
+      background: #f0f3f5; border-radius: 8px; font-size: 13px; color: #6B7780;
+    }
+    .caja-crudo b { margin-left: auto; font-size: 22px; color: #1F4F70; font-variant-numeric: tabular-nums; }
+    .fila-cal {
+      display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #e6eaed;
+    }
+    .fila-cal div { flex: 1; }
+    .fila-cal small { display: block; color: #6B7780; font-size: 12px; }
+    .fila-cal b { font-size: 20px; font-variant-numeric: tabular-nums; }
+    .mini {
+      background: #D7E3EC; color: #1F4F70; border: 0; border-radius: 8px; padding: 10px 14px;
+      font-weight: 600; font-size: 13px; cursor: pointer;
+    }
+    .mini:hover { background: #c6d7e3; }
+    .mini:disabled { background: #eef1f3; color: #aab4bb; cursor: default; }
+    .pasos { font-size: 12px; color: #6B7780; line-height: 1.6; margin: 10px 0 0; padding-left: 18px; }
+    .sub { font-size: 12px; color: #6B7780; margin: 0 0 6px; }
+    .limite { display: grid; grid-template-columns: 1fr 92px 92px; gap: 8px; align-items: center; margin-top: 8px; }
+    .limite label { font-size: 13px; font-weight: 600; }
+    .limite .campo { position: relative; }
+    .limite input {
+      width: 100%; padding: 8px 30px 8px 22px; border: 1px solid #c8d1d8; border-radius: 6px; font-size: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+    .limite input:disabled { background: #f5f7f8; color: #aab4bb; }
+    .limite .punto { position: absolute; left: 8px; top: 50%; width: 8px; height: 8px; border-radius: 50%; transform: translateY(-50%); }
+    .limite .unid { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #888; }
+    .cab-limites { display: grid; grid-template-columns: 1fr 92px 92px; gap: 8px; font-size: 11px; color: #6B7780; margin-top: 6px; }
+    .error-campo { color: #B23A3A; font-size: 12px; margin-top: 4px; }
+    .acciones-ajustes { margin-top: 14px; }
+    .acciones-ajustes .enlace { display: block; margin: 8px auto 0; }
+
+    .bitacora { list-style: none; margin: 10px 0 0; padding: 0; max-height: 360px; overflow-y: auto; }
+    .bitacora li {
+      display: flex; gap: 10px; align-items: flex-start; padding: 8px 2px; border-bottom: 1px solid #eef1f3;
+      font-size: 13px;
+    }
+    .bitacora .icono { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex: none; }
+    .bitacora .texto { flex: 1; }
+    .bitacora .hora { color: #6B7780; font-variant-numeric: tabular-nums; font-size: 12px; }
+    .vacio { font-size: 13px; color: #6B7780; margin: 12px 0 4px; }
+
+    .aviso {
+      position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #263238; color: white;
+      padding: 12px 18px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      max-width: calc(100% - 32px); text-align: center; z-index: 10;
+    }
+    .aviso.error { background: #B23A3A; }
+    .pie { text-align: center; margin-top: 24px; font-size: 11px; color: #999; }
   </style>
 </head>
 <body>
+<div class="contenedor">
   <h1>Sistema de monitoreo — Km 4</h1>
-  <div id="status" class="status n">SIN CONEXIÓN — pulse "Conectar Arduino"</div>
+  <div class="via" id="via"></div>
+  <div class="simulado" id="franjaSim" hidden>MODO SIMULADO — datos de prueba, sin Arduino</div>
+  <div id="status" class="status n">SIN CONEXIÓN — elija USB o Bluetooth para conectar</div>
+
   <div class="sensores">
     <div class="card" id="cardHum">
       <h3>Humedad del suelo</h3>
@@ -87,208 +164,949 @@
       <div class="crudo" id="draw">lectura cruda: --</div>
     </div>
   </div>
-  <button class="boton" id="btnConectar" onclick="conectar()">Conectar Arduino</button>
-  <button class="boton" id="btnReset" onclick="reiniciar()" disabled>Reiniciar línea base</button>
-  <button class="boton sec" id="btnSonido" onclick="alternarSonido()">Sonido de alertas: activado</button>
+
+  <div class="card grafica">
+    <div class="grafica-cab">
+      <span class="etiqueta">Evolución — últimos 3 minutos</span>
+      <div class="segmentos" id="segmentos">
+        <button class="activo" data-sensor="hum" onclick="elegirGrafica('hum')">Humedad</button>
+        <button data-sensor="inc" onclick="elegirGrafica('inc')">Inclinación</button>
+        <button data-sensor="dis" onclick="elegirGrafica('dis')">Desplazamiento</button>
+      </div>
+    </div>
+    <canvas id="grafica"></canvas>
+    <div class="pie-grafica" id="pieGrafica"></div>
+  </div>
+
+  <div id="conectar">
+    <div class="fila-botones">
+      <button class="boton" onclick="conectar('usb')">Conectar por USB</button>
+      <button class="boton" onclick="conectar('bt')">Conectar por Bluetooth</button>
+    </div>
+    <p class="ayuda">
+      Bluetooth: primero empareje el HC-05 en Windows (Configuración → Bluetooth, PIN 1234 o 0000).
+      El HC-05 acepta una sola conexión: mientras la laptop lo use, el celular no puede conectarse.<br>
+      <button class="enlace" onclick="conectarSimulado()">Probar en modo simulado (sin Arduino)</button>
+    </p>
+  </div>
+
+  <div class="fila-botones">
+    <button class="boton" id="btnReset" onclick="reiniciar()" disabled>Reiniciar línea base</button>
+    <button class="boton sec" id="btnSonido" onclick="alternarSonido()">Sonido de alertas: activado</button>
+    <button class="boton sec" id="btnDesconectar" onclick="desconectar()" hidden>Desconectar</button>
+  </div>
+
+  <div class="paneles">
+    <section class="panel">
+      <div class="panel-cab">
+        <h2>Calibración y límites</h2>
+      </div>
+      <div class="nota" id="notaAjustes">Conecte el Arduino para ver y cambiar los ajustes.</div>
+
+      <div class="caja-crudo">Lectura cruda de humedad ahora <span id="crudoPct"></span><b id="crudoAhora">--</b></div>
+      <div class="fila-cal">
+        <div><small>Seco (al aire)</small><b id="cfgSeco">--</b></div>
+        <button class="mini" id="btnSeco" onclick="calibrar(true)" disabled>Medir seco</button>
+      </div>
+      <div class="fila-cal">
+        <div><small>Mojado (en agua)</small><b id="cfgMojado">--</b></div>
+        <button class="mini" id="btnMojado" onclick="calibrar(false)" disabled>Medir mojado</button>
+      </div>
+      <ol class="pasos">
+        <li>Saque el sensor, séquelo y pulse «Medir seco».</li>
+        <li>Métalo en un vaso de agua y pulse «Medir mojado».</li>
+        <li>Vuelva a enterrarlo y reinicie la línea base.</li>
+      </ol>
+
+      <h3>Límites de alerta</h3>
+      <p class="sub">Cuánto tiene que cambiar cada sensor, respecto a la línea base, para dar alerta.</p>
+      <div class="cab-limites"><span></span><span>Amarilla</span><span>Roja</span></div>
+      <div id="limites"></div>
+      <div class="acciones-ajustes">
+        <button class="boton" id="btnGuardar" onclick="guardarLimites()" disabled>Guardar límites</button>
+        <button class="enlace peligro" id="btnFabrica" onclick="restaurarFabrica()" disabled>Restaurar valores de fábrica</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-cab">
+        <h2>Bitácora de eventos</h2>
+        <button class="enlace" id="btnBorrar" onclick="borrarBitacora()" disabled>Borrar</button>
+      </div>
+      <p class="vacio" id="bitVacia">Aún no hay eventos. Aquí aparecen las alertas, los reinicios de línea base,
+        los cambios de ajustes y la conexión con el Arduino.</p>
+      <ul class="bitacora" id="bitacora"></ul>
+    </section>
+  </div>
+
   <div class="pie">Prototipo Km 4 — Proyecto Integrado en Ingeniería · Abrir en Chrome o Edge</div>
+</div>
+<div class="aviso" id="aviso" hidden></div>
 
-  <script>
-    const estados = [
-      { clase: 'v', texto: 'ESTADO: NORMAL' },
-      { clase: 'a', texto: 'ALERTA AMARILLA — Vigilar' },
-      { clase: 'r', texto: 'ALERTA ROJA — Riesgo inminente' }
-    ];
+<script>
+  const estados = [
+    { clase: 'v', texto: 'ESTADO: NORMAL' },
+    { clase: 'a', texto: 'ALERTA AMARILLA — Vigilar' },
+    { clase: 'r', texto: 'ALERTA ROJA — Riesgo inminente' }
+  ];
+  const SPP = '00001101-0000-1000-8000-00805f9b34fb';
+  const NOMBRE = { usb: 'USB', bt: 'Bluetooth', sim: 'simulador' };
+  const FABRICA = { humSeco: 800, humMojado: 350, hum: [15, 25], inc: [2.5, 5], dis: [3, 6] };
+  const SENSORES = [
+    { clave: 'hum', nombre: 'Humedad (cuánto sube)', unidad: '%', maximo: 100 },
+    { clave: 'inc', nombre: 'Inclinación', unidad: '°', maximo: 45 },
+    { clave: 'dis', nombre: 'Desplazamiento', unidad: 'mm', maximo: 60 },
+  ];
+  const VENTANA_MS = 3 * 60 * 1000;
+  const COLOR = { verde: '#2E7D4F', amarillo: '#E5A000', rojo: '#D64545', azul: '#1F4F70', gris: '#7D8A94' };
+  const $ = (id) => document.getElementById(id);
 
-    let writer = null;
-    let conectadoDesde = 0;
-    let ultimoDato = 0;
+  // ---------- Estado general ----------
+  let puerto = null;
+  let modo = null;
+  let lector = null;
+  let tareaLectura = null;
+  // desconectado | conectando | conectado | reconectando
+  let estado = 'desconectado';
+  let conectadoDesde = 0;
+  let ultimoDato = 0;
+  let avisoSinDatos = false;
+  let timerReintento = null;
+  let ocupado = false;
+  let config = null;
+  let configPedida = false;
+  let ultimaLectura = null;
+  let nivelRegistrado = null;
+  const historial = [];
+  const eventos = [];
+  const esperas = [];
+  let sim = null;
 
-    let audioCtx = null;
-    let sonidoActivo = true;
-    let nivelSonando = 0;
-    let timerRojo = null;
+  // ---------- Sonido ----------
+  let audioCtx = null;
+  let sonidoActivo = true;
+  let nivelSonando = 0;
+  let timerRojo = null;
 
-    // El navegador solo deja sonar audio después de un clic, por eso esto se
-    // llama al pulsar "Conectar Arduino" o el botón de sonido
-    function prepararAudio() {
-      if (!audioCtx) {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
-        audioCtx = new Ctx();
+  // El navegador solo deja sonar audio después de un clic, por eso esto se
+  // llama al pulsar un botón de conexión o el de sonido
+  function prepararAudio() {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      audioCtx = new Ctx();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function campana(frec, retraso) {
+    const t0 = audioCtx.currentTime + retraso;
+    [[frec, 0.18, 1.4], [frec * 2, 0.04, 0.7]].forEach(([f, vol, dur]) => {
+      const osc = audioCtx.createOscillator();
+      const gan = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gan.gain.setValueAtTime(0.0001, t0);
+      gan.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
+      gan.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(gan);
+      gan.connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.05);
+    });
+  }
+
+  function sonarAmarillo() {
+    if (!sonidoActivo || !audioCtx) return;
+    campana(659.25, 0);
+    campana(880, 0.25);
+  }
+
+  function sonarRojo() {
+    if (!sonidoActivo || !audioCtx) return;
+    campana(880, 0);
+    campana(698.46, 0.22);
+    campana(587.33, 0.44);
+  }
+
+  function actualizarSonido(nivel) {
+    if (nivel === nivelSonando) return;
+    clearInterval(timerRojo);
+    timerRojo = null;
+    if (nivel === 2) {
+      sonarRojo();
+      timerRojo = setInterval(sonarRojo, 2500);
+    } else if (nivel === 1 && nivelSonando === 0) {
+      sonarAmarillo();
+    }
+    nivelSonando = nivel;
+  }
+
+  function detenerAlertas() {
+    clearInterval(timerRojo);
+    timerRojo = null;
+    nivelSonando = 0;
+  }
+
+  function alternarSonido() {
+    prepararAudio();
+    sonidoActivo = !sonidoActivo;
+    $('btnSonido').textContent = 'Sonido de alertas: ' + (sonidoActivo ? 'activado' : 'silenciado');
+    if (sonidoActivo) sonarAmarillo();
+  }
+
+  // ---------- Utilidades de pantalla ----------
+  let timerAviso = null;
+  function aviso(texto, error = false) {
+    const a = $('aviso');
+    a.textContent = texto;
+    a.className = 'aviso' + (error ? ' error' : '');
+    a.hidden = false;
+    clearTimeout(timerAviso);
+    timerAviso = setTimeout(() => { a.hidden = true; }, 4000);
+  }
+
+  function ponerStatus(clase, texto) {
+    const s = $('status');
+    s.className = 'status ' + clase;
+    s.textContent = texto;
+  }
+
+  const corto = (v) => Number(v.toFixed(2)).toString();
+  const signo = (v, dec) => (v > 0 && Number(v.toFixed(dec)) !== 0 ? '+' : '') + v.toFixed(dec);
+  const limitesActuales = () => config || FABRICA;
+
+  function pintarConexion() {
+    const activo = estado !== 'desconectado';
+    $('conectar').hidden = activo;
+    $('btnDesconectar').hidden = !activo;
+    $('btnReset').disabled = estado !== 'conectado' || ocupado;
+    $('franjaSim').hidden = modo !== 'sim' || !activo;
+    $('via').textContent = activo
+      ? 'Conexión: ' + NOMBRE[modo] + (estado === 'reconectando' ? ' — reconectando…' : '')
+      : '';
+    pintarAjustes();
+  }
+
+  // ---------- Datos que llegan del Arduino ----------
+  function mostrar(d) {
+    ultimoDato = Date.now();
+    avisoSinDatos = false;
+    ultimaLectura = d;
+    document.body.classList.remove('stale');
+    $('hraw').textContent = 'lectura cruda: ' + d.hum_raw;
+    $('draw').textContent = 'lectura cruda: ' + d.dis_raw;
+    $('humedad').textContent = d.hum.toFixed(1);
+    $('desplazamiento').textContent = d.dis.toFixed(2);
+    $('dhum').textContent = 'Δ ' + signo(d.dhum, 1) + ' %';
+    $('ddis').textContent = 'Δ ' + signo(d.ddis, 2) + ' mm';
+
+    const cardInc = $('cardInc');
+    if (d.inc_ok) {
+      $('inclinacion').textContent = d.inc.toFixed(2);
+      $('dinc').textContent = 'Δ ' + signo(d.dinc, 2) + ' °';
+      cardInc.classList.remove('off');
+    } else {
+      $('inclinacion').textContent = 'N/D';
+      $('dinc').textContent = 'sensor no conectado';
+      cardInc.classList.add('off');
+    }
+
+    ponerStatus(estados[d.a].clase, estados[d.a].texto);
+    actualizarSonido(d.a);
+
+    historial.push({
+      t: ultimoDato,
+      hum: d.dhum,
+      inc: d.inc_ok ? Math.abs(d.dinc) : null,
+      dis: Math.abs(d.ddis),
+    });
+    while (historial.length && ultimoDato - historial[0].t > VENTANA_MS) historial.shift();
+    registrarNivel(d);
+    dibujarGrafica();
+    pintarCrudo();
+
+    if (!configPedida) {
+      configPedida = true;
+      pedirConfig();
+    }
+  }
+
+  function configDe(linea) {
+    if (!linea.startsWith('{') || !linea.includes('"cfg"')) return null;
+    try {
+      const c = JSON.parse(linea);
+      return {
+        humSeco: c.hum_seco, humMojado: c.hum_mojado,
+        hum: [c.hum_am, c.hum_ro], inc: [c.inc_am, c.inc_ro], dis: [c.dis_am, c.dis_ro],
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function procesarLinea(linea) {
+    if (!linea) return;
+    for (const e of esperas.slice()) {
+      if (e.acepta(linea)) {
+        esperas.splice(esperas.indexOf(e), 1);
+        e.res(linea);
       }
-      if (audioCtx.state === 'suspended') audioCtx.resume();
     }
-
-    function campana(frec, retraso) {
-      const t0 = audioCtx.currentTime + retraso;
-      [[frec, 0.18, 1.4], [frec * 2, 0.04, 0.7]].forEach(([f, vol, dur]) => {
-        const osc = audioCtx.createOscillator();
-        const gan = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = f;
-        gan.gain.setValueAtTime(0.0001, t0);
-        gan.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
-        gan.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-        osc.connect(gan);
-        gan.connect(audioCtx.destination);
-        osc.start(t0);
-        osc.stop(t0 + dur + 0.05);
-      });
+    if (linea.includes('Linea base reiniciada')) {
+      registrar('base', 'Línea base reiniciada');
+      return;
     }
-
-    function sonarAmarillo() {
-      if (!sonidoActivo || !audioCtx) return;
-      campana(659.25, 0);
-      campana(880, 0.25);
+    const c = configDe(linea);
+    if (c) {
+      if (config) registrarCambiosConfig(config, c);
+      config = c;
+      pintarAjustes();
+      dibujarGrafica();
+      return;
     }
-
-    function sonarRojo() {
-      if (!sonidoActivo || !audioCtx) return;
-      campana(880, 0);
-      campana(698.46, 0.22);
-      campana(587.33, 0.44);
-    }
-
-    function actualizarSonido(nivel) {
-      if (nivel === nivelSonando) return;
-      clearInterval(timerRojo);
-      timerRojo = null;
-      if (nivel === 2) {
-        sonarRojo();
-        timerRojo = setInterval(sonarRojo, 2500);
-      } else if (nivel === 1 && nivelSonando === 0) {
-        sonarAmarillo();
-      }
-      nivelSonando = nivel;
-    }
-
-    function detenerAlertas() {
-      clearInterval(timerRojo);
-      timerRojo = null;
-      nivelSonando = 0;
-    }
-
-    function alternarSonido() {
-      prepararAudio();
-      sonidoActivo = !sonidoActivo;
-      document.getElementById('btnSonido').textContent =
-        'Sonido de alertas: ' + (sonidoActivo ? 'activado' : 'silenciado');
-      if (sonidoActivo) sonarAmarillo();
-    }
-
-    function mostrar(d) {
-      ultimoDato = Date.now();
-      document.body.classList.remove('stale');
-      document.getElementById('hraw').textContent = 'lectura cruda: ' + d.hum_raw;
-      document.getElementById('draw').textContent = 'lectura cruda: ' + d.dis_raw;
-      document.getElementById('humedad').textContent = d.hum.toFixed(1);
-      document.getElementById('desplazamiento').textContent = d.dis.toFixed(2);
-      document.getElementById('dhum').textContent = 'Δ ' + d.dhum.toFixed(1) + ' %';
-      document.getElementById('ddis').textContent = 'Δ ' + d.ddis.toFixed(2) + ' mm';
-
-      const cardInc = document.getElementById('cardInc');
-      if (d.inc_ok) {
-        document.getElementById('inclinacion').textContent = d.inc.toFixed(2);
-        document.getElementById('dinc').textContent = 'Δ ' + d.dinc.toFixed(2) + ' °';
-        cardInc.classList.remove('off');
-      } else {
-        document.getElementById('inclinacion').textContent = 'N/D';
-        document.getElementById('dinc').textContent = 'sensor no conectado';
-        cardInc.classList.add('off');
-      }
-
-      const s = document.getElementById('status');
-      s.className = 'status ' + estados[d.a].clase;
-      s.textContent = estados[d.a].texto;
-      actualizarSonido(d.a);
-    }
-
-    function sinConexion(msg) {
-      detenerAlertas();
-      const s = document.getElementById('status');
-      s.className = 'status n';
-      s.textContent = msg;
-      document.body.classList.add('stale');
-      document.getElementById('btnConectar').disabled = false;
-      document.getElementById('btnReset').disabled = true;
-      writer = null;
-      conectadoDesde = 0;
-      ultimoDato = 0;
-    }
-
-    // Si dejan de llegar datos, no dejar el último estado como si estuviera en vivo.
-    // Antes del primer dato se da más margen: el Arduino se reinicia al abrir el puerto.
-    setInterval(() => {
-      if (!conectadoDesde) return;
-      const ref = ultimoDato || conectadoDesde;
-      const limite = ultimoDato ? 3000 : 8000;
-      if (Date.now() - ref > limite) {
-        const s = document.getElementById('status');
-        s.className = 'status n';
-        s.textContent = 'SIN DATOS — revise la conexión con el Arduino';
-        document.body.classList.add('stale');
-        detenerAlertas();
-      }
-    }, 500);
-
-    async function conectar() {
-      prepararAudio();
-      if (!('serial' in navigator)) {
-        alert('Este navegador no soporta Web Serial. Abra la página en Chrome o Edge.');
+    if (linea.startsWith('{')) {
+      let d = null;
+      try { d = JSON.parse(linea.replace(/:\s*-?(nan|inf|ovf)\b/g, ':null')); } catch (e) { /* línea incompleta */ }
+      if (d && [0, 1, 2].includes(d.a)) {
+        for (const k of ['hum', 'inc', 'dis', 'dhum', 'dinc', 'ddis']) if (typeof d[k] !== 'number') d[k] = 0;
+        mostrar(d);
         return;
       }
-      try {
-        const port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 9600 });
+    }
+    console.log('Arduino:', linea);
+  }
 
-        const encoder = new TextEncoderStream();
-        encoder.readable.pipeTo(port.writable);
-        writer = encoder.writable.getWriter();
+  // ---------- Bitácora ----------
+  const ESTILO_EVENTO = {
+    roja: COLOR.rojo, amarilla: COLOR.amarillo, normal: COLOR.verde,
+    base: COLOR.azul, ajuste: COLOR.azul, conexion: COLOR.gris,
+  };
 
-        const decoder = new TextDecoderStream();
-        port.readable.pipeTo(decoder.writable);
-        const reader = decoder.readable.getReader();
+  function registrar(tipo, texto) {
+    eventos.push({ hora: new Date(), tipo, texto });
+    if (eventos.length > 300) eventos.shift();
+    pintarBitacora();
+  }
 
-        document.getElementById('btnConectar').disabled = true;
-        document.getElementById('btnReset').disabled = false;
-        document.getElementById('status').textContent = 'Conectado — esperando datos...';
-        conectadoDesde = Date.now();
+  function causas(d) {
+    const c = limitesActuales();
+    const lista = [];
+    if (d.dhum >= c.hum[0]) lista.push('humedad ' + signo(d.dhum, 1) + ' %');
+    if (d.inc_ok && Math.abs(d.dinc) >= c.inc[0]) lista.push('inclinación ' + signo(d.dinc, 2) + '°');
+    if (Math.abs(d.ddis) >= c.dis[0]) lista.push('desplazamiento ' + signo(d.ddis, 2) + ' mm');
+    return lista.length ? ' — ' + lista.join(', ') : '';
+  }
 
-        let buffer = '';
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += value;
-          let i;
-          while ((i = buffer.indexOf('\n')) >= 0) {
-            const linea = buffer.slice(0, i).trim();
-            buffer = buffer.slice(i + 1);
-            if (linea.startsWith('{')) {
-              let d = null;
-              try { d = JSON.parse(linea); } catch (e) { /* línea incompleta */ }
-              if (d && typeof d.a === 'number') mostrar(d);
-              else if (d) console.log('Arduino:', linea);
-            } else if (linea) {
-              console.log('Arduino:', linea);
-            }
-          }
-        }
-        sinConexion('SIN CONEXIÓN — se desconectó el Arduino. Recargue la página (F5) y vuelva a conectar');
-      } catch (e) {
-        console.error(e);
-        if (conectadoDesde) {
-          sinConexion('SIN CONEXIÓN — se desconectó el Arduino. Recargue la página (F5) y vuelva a conectar');
-        } else {
-          sinConexion('SIN CONEXIÓN — ' + (e.message || 'error al conectar'));
-        }
+  function registrarNivel(d) {
+    if (d.a === nivelRegistrado) return;
+    const anterior = nivelRegistrado;
+    nivelRegistrado = d.a;
+    if (anterior === null && d.a === 0) return;
+    if (d.a === 2) registrar('roja', 'Alerta roja' + causas(d));
+    else if (d.a === 1) registrar('amarilla', 'Alerta amarilla' + causas(d));
+    else registrar('normal', 'Volvió a estado normal');
+  }
+
+  function registrarCambiosConfig(a, b) {
+    if (a.humSeco !== b.humSeco) registrar('ajuste', `Calibración: seco ${a.humSeco} → ${b.humSeco}`);
+    if (a.humMojado !== b.humMojado) registrar('ajuste', `Calibración: mojado ${a.humMojado} → ${b.humMojado}`);
+    for (const s of [['hum', 'humedad', '%'], ['inc', 'inclinación', '°'], ['dis', 'desplazamiento', 'mm']]) {
+      const [k, nombre, u] = s;
+      if (Math.abs(a[k][0] - b[k][0]) > 0.005 || Math.abs(a[k][1] - b[k][1]) > 0.005) {
+        registrar('ajuste', `Límites de ${nombre}: ${corto(a[k][0])}/${corto(a[k][1])} → ${corto(b[k][0])}/${corto(b[k][1])} ${u}`);
       }
     }
+  }
 
-    async function reiniciar() {
-      if (!writer) return;
-      try { await writer.write('r\n'); }
-      catch (e) { alert('Error reiniciando'); }
+  function pintarBitacora() {
+    const ul = $('bitacora');
+    ul.replaceChildren(...eventos.slice().reverse().map((e) => {
+      const li = document.createElement('li');
+      const icono = document.createElement('span');
+      icono.className = 'icono';
+      icono.style.background = ESTILO_EVENTO[e.tipo];
+      const texto = document.createElement('span');
+      texto.className = 'texto';
+      texto.textContent = e.texto;
+      const hora = document.createElement('span');
+      hora.className = 'hora';
+      hora.textContent = e.hora.toLocaleTimeString('es-CO', { hour12: false });
+      li.append(icono, texto, hora);
+      return li;
+    }));
+    $('bitVacia').hidden = eventos.length > 0;
+    $('btnBorrar').disabled = eventos.length === 0;
+  }
+
+  function borrarBitacora() {
+    if (!confirm('¿Borrar todos los eventos de esta sesión?')) return;
+    eventos.length = 0;
+    pintarBitacora();
+  }
+
+  // ---------- Gráfica ----------
+  let sensorGrafica = 'hum';
+  const PIE_GRAFICA = {
+    hum: 'Cuánto subió la humedad respecto a la línea base (%)',
+    inc: 'Cambio de inclinación respecto a la línea base (°)',
+    dis: 'Desplazamiento respecto a la línea base (mm)',
+  };
+
+  function elegirGrafica(s) {
+    sensorGrafica = s;
+    for (const b of $('segmentos').children) b.classList.toggle('activo', b.dataset.sensor === s);
+    dibujarGrafica();
+  }
+
+  function dibujarGrafica() {
+    const cv = $('grafica');
+    const dpr = window.devicePixelRatio || 1;
+    const ancho = cv.clientWidth, alto = cv.clientHeight;
+    if (!ancho) return;
+    if (cv.width !== Math.round(ancho * dpr)) { cv.width = Math.round(ancho * dpr); cv.height = Math.round(alto * dpr); }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, ancho, alto);
+    g.font = '10px -apple-system, "Segoe UI", sans-serif';
+    $('pieGrafica').textContent = PIE_GRAFICA[sensorGrafica];
+
+    if (sensorGrafica === 'inc' && ultimaLectura && !ultimaLectura.inc_ok) {
+      g.fillStyle = '#6B7780';
+      g.font = '13px -apple-system, "Segoe UI", sans-serif';
+      g.textAlign = 'center';
+      g.fillText('Sensor de inclinación no conectado', ancho / 2, alto / 2);
+      return;
     }
-  </script>
+
+    const [am, ro] = limitesActuales()[sensorGrafica];
+    const area = { x: 36, y: 8, w: ancho - 36 - 8, h: alto - 8 - 22 };
+    const ahora = Date.now(), inicio = ahora - VENTANA_MS;
+    const puntos = historial.filter((p) => p.t >= inicio && p[sensorGrafica] !== null && isFinite(p[sensorGrafica]));
+    const valores = puntos.map((p) => p[sensorGrafica]);
+    const yMax = Math.max(ro * 1.3, ...valores.map((v) => v * 1.1));
+    const yMin = Math.min(0, ...valores.map((v) => v * 1.1));
+    const y = (v) => area.y + area.h - (v - yMin) / (yMax - yMin) * area.h;
+    const x = (t) => area.x + (t - inicio) / VENTANA_MS * area.w;
+
+    const franjas = [
+      [yMin, am, 'rgba(46,125,79,0.07)'],
+      [am, ro, 'rgba(229,160,0,0.13)'],
+      [ro, yMax, 'rgba(214,69,69,0.10)'],
+    ];
+    for (const [desde, hasta, color] of franjas) {
+      g.fillStyle = color;
+      g.fillRect(area.x, y(hasta), area.w, y(desde) - y(hasta));
+    }
+
+    g.strokeStyle = '#D5DCE1';
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(area.x, y(0)); g.lineTo(area.x + area.w, y(0)); g.stroke();
+    g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillStyle = '#6B7780';
+    g.fillText('0', area.x - 4, y(0));
+
+    for (const [v, color] of [[am, COLOR.amarillo], [ro, COLOR.rojo]]) {
+      g.strokeStyle = color; g.lineWidth = 1.2; g.setLineDash([4, 4]);
+      g.beginPath(); g.moveTo(area.x, y(v)); g.lineTo(area.x + area.w, y(v)); g.stroke();
+      g.setLineDash([]);
+      g.fillStyle = color;
+      g.fillText(corto(v), area.x - 4, y(v));
+    }
+
+    g.fillStyle = '#6B7780'; g.textBaseline = 'top';
+    for (let i = 0; i <= 3; i++) {
+      const px = area.x + area.w * i / 3;
+      g.textAlign = i === 0 ? 'left' : i === 3 ? 'right' : 'center';
+      g.fillText(i === 3 ? 'ahora' : `-${3 - i} min`, px, area.y + area.h + 6);
+    }
+
+    if (!puntos.length) {
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '13px -apple-system, "Segoe UI", sans-serif';
+      g.fillText('Esperando datos…', area.x + area.w / 2, area.y + area.h / 2);
+      return;
+    }
+
+    g.strokeStyle = COLOR.azul; g.lineWidth = 2.2; g.lineJoin = 'round'; g.lineCap = 'round';
+    g.beginPath();
+    let anterior = null;
+    for (const p of puntos) {
+      const px = x(p.t), py = y(p[sensorGrafica]);
+      if (anterior === null || p.t - anterior > 3500) g.moveTo(px, py); else g.lineTo(px, py);
+      anterior = p.t;
+    }
+    g.stroke();
+    const u = puntos[puntos.length - 1];
+    g.fillStyle = 'white'; g.beginPath(); g.arc(x(u.t), y(u[sensorGrafica]), 4.5, 0, 2 * Math.PI); g.fill();
+    g.fillStyle = COLOR.azul; g.beginPath(); g.arc(x(u.t), y(u[sensorGrafica]), 3.2, 0, 2 * Math.PI); g.fill();
+  }
+
+  window.addEventListener('resize', dibujarGrafica);
+
+  // ---------- Calibración y límites ----------
+  const editado = { hum: false, inc: false, dis: false };
+
+  function construirLimites() {
+    const cont = $('limites');
+    for (const s of SENSORES) {
+      const fila = document.createElement('div');
+      fila.className = 'limite';
+      fila.innerHTML = `<label>${s.nombre}</label>` +
+        ['amarillo', 'rojo'].map((n) => `<div class="campo"><span class="punto" style="background:${COLOR[n]}"></span>` +
+          `<input id="lim_${s.clave}_${n}" inputmode="decimal" disabled><span class="unid">${s.unidad}</span></div>`).join('');
+      const err = document.createElement('div');
+      err.className = 'error-campo';
+      err.id = 'err_' + s.clave;
+      err.hidden = true;
+      cont.append(fila, err);
+      for (const n of ['amarillo', 'rojo']) {
+        $(`lim_${s.clave}_${n}`).addEventListener('input', () => { editado[s.clave] = true; });
+      }
+    }
+  }
+
+  function pintarCrudo() {
+    const vigente = estado === 'conectado' && ultimaLectura && !avisoSinDatos;
+    $('crudoAhora').textContent = vigente ? ultimaLectura.hum_raw : '--';
+    $('crudoPct').textContent = vigente ? `(${ultimaLectura.hum.toFixed(0)} %)` : '';
+  }
+
+  function pintarAjustes() {
+    const conectado = estado === 'conectado';
+    const habil = conectado && config && !ocupado;
+    const nota = $('notaAjustes');
+    if (!conectado) {
+      nota.hidden = false;
+      nota.textContent = 'Conecte el Arduino para ver y cambiar los ajustes.';
+    } else if (!config) {
+      nota.hidden = false;
+      nota.textContent = 'Leyendo los ajustes del Arduino… Si no aparecen, revise que tenga el firmware nuevo.';
+    } else {
+      nota.hidden = true;
+    }
+    $('cfgSeco').textContent = config ? config.humSeco : '--';
+    $('cfgMojado').textContent = config ? config.humMojado : '--';
+    for (const id of ['btnSeco', 'btnMojado', 'btnGuardar', 'btnFabrica']) $(id).disabled = !habil;
+    for (const s of SENSORES) {
+      for (const [i, n] of ['amarillo', 'rojo'].entries()) {
+        const inp = $(`lim_${s.clave}_${n}`);
+        inp.disabled = !config;
+        if (config && !editado[s.clave]) inp.value = corto(config[s.clave][i]);
+      }
+    }
+    $('btnReset').disabled = !conectado || ocupado;
+    pintarCrudo();
+  }
+
+  async function ejecutar(accion) {
+    if (ocupado) return;
+    if (estado !== 'conectado') { aviso('No hay conexión con el Arduino', true); return; }
+    ocupado = true;
+    pintarAjustes();
+    try {
+      await accion();
+    } finally {
+      ocupado = false;
+      pintarAjustes();
+    }
+  }
+
+  function esperar(acepta, ms) {
+    return new Promise((res) => {
+      const e = { acepta, res };
+      esperas.push(e);
+      setTimeout(() => {
+        const i = esperas.indexOf(e);
+        if (i >= 0) { esperas.splice(i, 1); res(null); }
+      }, ms);
+    });
+  }
+
+  // Por Bluetooth el UNO puede perder un comando (SoftwareSerial no recibe mientras
+  // transmite): se reenvía hasta que llegue la respuesta del Arduino
+  async function pedir(comando, acepta) {
+    for (let i = 0; i < 3 && estado === 'conectado'; i++) {
+      const respuesta = esperar(acepta, 1500);
+      try { await enviar(comando + '\n'); } catch (e) { console.warn('No se pudo enviar:', e); }
+      const r = await respuesta;
+      if (r) return r;
+    }
+    return null;
+  }
+
+  async function pedirConfig() {
+    await pedir('cfg', (l) => configDe(l) !== null);
+    pintarAjustes();
+  }
+
+  async function ajuste(comando, aplicado, exito) {
+    const r = await pedir(comando, (l) => l.startsWith('>> Error') || (configDe(l) && aplicado(configDe(l))));
+    if (!r) aviso('El Arduino no respondió. Revise que tenga el firmware nuevo e intente otra vez.', true);
+    else if (r.startsWith('>> Error')) aviso(r.replace('>> Error:', '').trim(), true);
+    else { aviso(exito); return true; }
+    return false;
+  }
+
+  function reiniciar() {
+    const btn = $('btnReset');
+    return ejecutar(async () => {
+      btn.textContent = 'Reiniciando…';
+      const r = await pedir('r', (l) => l.includes('Linea base reiniciada'));
+      btn.textContent = 'Reiniciar línea base';
+      if (r) aviso('Línea base reiniciada');
+      else aviso('El Arduino no confirmó el reinicio. Intente de nuevo.', true);
+    });
+  }
+
+  function calibrar(seco) {
+    const texto = seco
+      ? 'Medir seco: saque el sensor de la tierra, límpielo y déjelo al aire, seco. ¿Listo?'
+      : 'Medir mojado: meta el sensor en un vaso de agua hasta la línea marcada, sin mojar la parte electrónica. ¿Listo?';
+    if (!confirm(texto)) return;
+    return ejecutar(() => ajuste(seco ? 'cal seco' : 'cal mojado', () => true,
+      seco ? 'Valor seco guardado' : 'Valor mojado guardado'));
+  }
+
+  function guardarLimites() {
+    if (!config) return;
+    const cambios = [];
+    let hayError = false;
+    for (const s of SENSORES) {
+      const leer = (n) => parseFloat($(`lim_${s.clave}_${n}`).value.trim().replace(',', '.'));
+      const am = leer('amarillo'), ro = leer('rojo');
+      let error = '';
+      if (!isFinite(am) || !isFinite(ro)) error = 'Escriba los dos números';
+      else if (am <= 0 || ro <= am) error = 'La roja debe ser mayor que la amarilla, y ambas mayores que 0';
+      else if (ro > s.maximo) error = `Máximo ${s.maximo} ${s.unidad}`;
+      else if (Math.abs(am - config[s.clave][0]) > 0.005 || Math.abs(ro - config[s.clave][1]) > 0.005) {
+        cambios.push([s.clave, am, ro]);
+      }
+      $('err_' + s.clave).textContent = error;
+      $('err_' + s.clave).hidden = !error;
+      hayError = hayError || !!error;
+    }
+    if (hayError) return;
+    if (!cambios.length) { aviso('No hay cambios para guardar'); return; }
+    return ejecutar(async () => {
+      for (const [clave, am, ro] of cambios) {
+        const ok = await ajuste(`umb ${clave} ${am.toFixed(2)} ${ro.toFixed(2)}`,
+          (c) => Math.abs(c[clave][0] - am) < 0.006 && Math.abs(c[clave][1] - ro) < 0.006, 'Límites guardados');
+        if (!ok) return;
+        editado[clave] = false;
+      }
+      aviso('Límites guardados en el Arduino');
+    });
+  }
+
+  function restaurarFabrica() {
+    if (!confirm('Restaurar valores de fábrica: la calibración vuelve a seco 800 / mojado 350 y los límites a ' +
+      'humedad 15/25 %, inclinación 2,5/5° y desplazamiento 3/6 mm. ¿Continuar?')) return;
+    for (const s of SENSORES) {
+      editado[s.clave] = false;
+      $('err_' + s.clave).hidden = true;
+    }
+    return ejecutar(() => ajuste('fabrica',
+      (c) => c.humSeco === FABRICA.humSeco && c.humMojado === FABRICA.humMojado &&
+        Math.abs(c.hum[0] - FABRICA.hum[0]) < 0.006 && Math.abs(c.hum[1] - FABRICA.hum[1]) < 0.006,
+      'Valores de fábrica restaurados'));
+  }
+
+  // ---------- Conexión USB / Bluetooth (Web Serial) ----------
+  async function enviar(texto) {
+    if (modo === 'sim') { sim.recibir(texto); return; }
+    const w = puerto.writable.getWriter();
+    try { await w.write(new TextEncoder().encode(texto)); }
+    finally { w.releaseLock(); }
+  }
+
+  async function leer(p) {
+    const dec = new TextDecoder();
+    let buffer = '';
+    while (p === puerto && estado === 'conectado' && p.readable) {
+      const r = p.readable.getReader();
+      lector = r;
+      let terminado = false;
+      try {
+        for (;;) {
+          const { value, done } = await r.read();
+          if (done) { terminado = true; break; }
+          buffer += dec.decode(value, { stream: true });
+          let i;
+          while ((i = buffer.indexOf('\n')) >= 0) {
+            procesarLinea(buffer.slice(0, i).trim());
+            buffer = buffer.slice(i + 1);
+          }
+          if (buffer.length > 2000) buffer = '';
+        }
+      } catch (e) {
+        // Errores leves (ruido en la línea) dejan el puerto usable y se sigue leyendo;
+        // si se desconectó, p.readable queda en null y se sale del ciclo
+        console.warn('Lectura:', e);
+      } finally {
+        try { r.releaseLock(); } catch (e) {}
+        if (lector === r) lector = null;
+      }
+      if (terminado) break;
+    }
+    if (p === puerto && estado === 'conectado') perdida();
+  }
+
+  async function cerrarPuerto() {
+    if (lector) { try { await lector.cancel(); } catch (e) {} }
+    if (tareaLectura) { try { await tareaLectura; } catch (e) {} }
+    tareaLectura = null;
+    if (puerto) { try { await puerto.close(); } catch (e) {} }
+  }
+
+  function alConectar() {
+    estado = 'conectado';
+    conectadoDesde = Date.now();
+    ultimoDato = 0;
+    avisoSinDatos = false;
+    configPedida = false;
+    nivelRegistrado = null;
+    registrar('conexion', modo === 'sim' ? 'Conectado al simulador' : 'Conectado al Arduino por ' + NOMBRE[modo]);
+    pintarConexion();
+    ponerStatus('n', 'Conectado por ' + NOMBRE[modo] + ' — esperando datos...');
+  }
+
+  async function abrir() {
+    try {
+      await puerto.open({ baudRate: 9600 });
+    } catch (e) {
+      console.warn('No se pudo abrir el puerto:', e);
+      return false;
+    }
+    if (estado === 'desconectado') {
+      try { await puerto.close(); } catch (e) {}
+      return false;
+    }
+    alConectar();
+    tareaLectura = leer(puerto);
+    return true;
+  }
+
+  async function conectar(m) {
+    prepararAudio();
+    if (!('serial' in navigator)) {
+      aviso('Este navegador no permite conectarse al Arduino. Abra la página en Chrome o Edge.', true);
+      return;
+    }
+    let p;
+    try {
+      p = m === 'bt'
+        ? await navigator.serial.requestPort({
+            filters: [{ bluetoothServiceClassId: SPP }],
+            allowedBluetoothServiceClassIds: [SPP],
+          })
+        : await navigator.serial.requestPort();
+    } catch (e) {
+      if (e.name === 'NotFoundError') return;
+      console.error(e);
+      if (m === 'bt' && e instanceof TypeError) {
+        aviso('Este Chrome no conecta Bluetooth directo. Actualícelo, o use "Conectar por USB" y elija ' +
+              'el puerto "Serie estándar sobre vínculo Bluetooth" del HC-05.', true);
+      } else {
+        aviso('No se pudo elegir el puerto: ' + (e.message || e), true);
+      }
+      return;
+    }
+
+    puerto = p;
+    modo = m;
+    estado = 'conectando';
+    pintarConexion();
+    ponerStatus('n', 'Conectando por ' + NOMBRE[m] + '…');
+    if (!(await abrir()) && estado === 'conectando') {
+      estado = 'desconectado';
+      puerto = null;
+      sinConexion('SIN CONEXIÓN — no se pudo abrir la conexión');
+      aviso(m === 'bt'
+        ? '¿Está encendido el Arduino? Si el celular está conectado al HC-05, desconéctelo: solo admite una conexión.'
+        : '¿Está abierto el Monitor Serie del Arduino IDE? Ciérrelo y vuelva a intentar.', true);
+    }
+  }
+
+  function perdida() {
+    estado = 'reconectando';
+    nivelRegistrado = null;
+    registrar('conexion', 'Se perdió la conexión con el Arduino');
+    detenerAlertas();
+    document.body.classList.add('stale');
+    ponerStatus('n', 'SIN CONEXIÓN — intentando reconectar por ' + NOMBRE[modo] + '…');
+    pintarConexion();
+    programarReintento(1000);
+  }
+
+  function programarReintento(ms = 3000) {
+    clearTimeout(timerReintento);
+    timerReintento = setTimeout(reintentar, ms);
+  }
+
+  async function reintentar() {
+    if (estado !== 'reconectando') return;
+    if (modo === 'sim') { sim.detener(); sim.iniciar(); return; }
+    await cerrarPuerto();
+    if (estado !== 'reconectando') return;
+    if (!(await abrir()) && estado === 'reconectando') programarReintento();
+  }
+
+  // Si se desconectó el cable USB y lo vuelven a conectar, reintentar de una vez
+  if ('serial' in navigator) {
+    navigator.serial.addEventListener('connect', (e) => {
+      if (estado !== 'reconectando' || !puerto || modo === 'sim') return;
+      const a = JSON.stringify(e.target.getInfo());
+      const b = JSON.stringify(puerto.getInfo());
+      if (e.target === puerto || a === b) {
+        puerto = e.target;
+        programarReintento(300);
+      }
+    });
+  }
+
+  function sinConexion(msg) {
+    detenerAlertas();
+    ponerStatus('n', msg);
+    document.body.classList.add('stale');
+    conectadoDesde = 0;
+    ultimoDato = 0;
+    pintarConexion();
+  }
+
+  async function desconectar() {
+    const estaba = estado;
+    estado = 'desconectado';
+    clearTimeout(timerReintento);
+    for (const e of esperas.splice(0)) e.res(null);
+    if (modo === 'sim') sim.detener();
+    else await cerrarPuerto();
+    puerto = null;
+    if (estaba === 'conectado') registrar('conexion', 'Desconectado');
+    nivelRegistrado = null;
+    config = null;
+    sinConexion('SIN CONEXIÓN — elija USB o Bluetooth para conectar');
+    modo = null;
+    pintarConexion();
+  }
+
+  // Si dejan de llegar datos, no dejar el último estado como si estuviera en vivo.
+  // Antes del primer dato se da más margen: por USB el Arduino se reinicia al abrir el puerto.
+  // Si pasa mucho más tiempo, se cierra y se vuelve a abrir la conexión.
+  setInterval(() => {
+    if (estado !== 'conectado') return;
+    const t = Date.now() - (ultimoDato || conectadoDesde);
+    if (t > 12000) {
+      perdida();
+      return;
+    }
+    const limite = ultimoDato ? 3000 : 8000;
+    if (t > limite && !avisoSinDatos) {
+      avisoSinDatos = true;
+      nivelRegistrado = null;
+      registrar('conexion', 'El Arduino dejó de enviar datos');
+      ponerStatus('n', 'SIN DATOS — revise la conexión con el Arduino');
+      document.body.classList.add('stale');
+      detenerAlertas();
+      pintarCrudo();
+    }
+  }, 500);
+
+  // ---------- Modo simulado ----------
+  // Imita al Arduino (incluidos los comandos): un ciclo de 50 s en el que la
+  // humedad sube como en una lluvia (normal → amarilla → roja) y luego baja
+  function crearSimulador() {
+    const s = {
+      seco: 800, mojado: 350, lim: { hum: [15, 25], inc: [2.5, 5], dis: [3, 6] },
+      segundos: 0, crudoHum: 557, crudoDis: 513, actual: [54, 1.2, 30.12], base: [54, 1.2, 30.12],
+      timers: [],
+    };
+    const ruido = (a) => (Math.random() * 2 - 1) * a;
+    const humedad = (crudo) => Math.min(100, Math.max(0, 100 * (s.seco - crudo) / (s.seco - s.mojado)));
+    const lluvia = () => {
+      const f = s.segundos % 50;
+      if (f < 10) return 0;
+      if (f < 20) return 0.6 * (f - 10) / 10;
+      if (f < 30) return 0.6 + 0.4 * (f - 20) / 10;
+      if (f < 38) return 1;
+      return 1 - (f - 38) / 12;
+    };
+    const medir = () => {
+      const l = lluvia(), mov = Math.max(0, l - 0.6) / 0.4;
+      s.crudoHum = Math.round(557 - 135 * l + ruido(1.5));
+      const dis = 30.12 + 7 * mov + ruido(0.04);
+      s.crudoDis = Math.round(dis / 60 * 1023);
+      s.actual = [humedad(s.crudoHum), 1.2 + 5.5 * mov + ruido(0.05), dis];
+    };
+    const nivel = (d, k) => (d >= s.lim[k][1] ? 2 : d >= s.lim[k][0] ? 1 : 0);
+    const decir = (l) => s.timers.push(setTimeout(() => procesarLinea(l), 150));
+    const cfg = () => JSON.stringify({
+      cfg: 1, hum_seco: s.seco, hum_mojado: s.mojado,
+      hum_am: s.lim.hum[0], hum_ro: s.lim.hum[1], inc_am: s.lim.inc[0], inc_ro: s.lim.inc[1],
+      dis_am: s.lim.dis[0], dis_ro: s.lim.dis[1],
+    });
+    const reiniciarBase = () => { s.actual[0] = humedad(s.crudoHum); s.base = s.actual.slice(); };
+    const enviarLectura = () => {
+      s.segundos++;
+      medir();
+      const [hum, inc, dis] = s.actual;
+      const dh = hum - s.base[0], di = Math.abs(inc - s.base[1]), dd = dis - s.base[2];
+      const a = Math.max(nivel(dh, 'hum'), nivel(di, 'inc'), nivel(Math.abs(dd), 'dis'));
+      const f = (v) => Number(v.toFixed(2));
+      procesarLinea(JSON.stringify({
+        hum: f(hum), inc: f(inc), dis: f(dis), dhum: f(dh), dinc: f(di), ddis: f(dd),
+        a, inc_ok: true, hum_raw: s.crudoHum, dis_raw: s.crudoDis,
+      }));
+    };
+    s.iniciar = () => {
+      s.timers.push(setTimeout(() => {
+        alConectar();
+        medir();
+        s.base = s.actual.slice();
+        s.timers.push(setInterval(enviarLectura, 1000));
+      }, 1200));
+    };
+    s.detener = () => { for (const t of s.timers) { clearTimeout(t); clearInterval(t); } s.timers = []; };
+    s.recibir = (texto) => {
+      for (const linea of texto.toLowerCase().split(/[\r\n]+/)) {
+        const p = linea.trim().split(/\s+/);
+        if (!p[0]) continue;
+        if (p[0] === 'r') { reiniciarBase(); decir('>> Linea base reiniciada'); }
+        else if (p[0] === 'cfg') decir(cfg());
+        else if (p[0] === 'fabrica') {
+          s.seco = 800; s.mojado = 350; s.lim = { hum: [15, 25], inc: [2.5, 5], dis: [3, 6] };
+          reiniciarBase(); decir('>> Valores de fabrica restaurados'); decir('>> Linea base reiniciada'); decir(cfg());
+        } else if (p[0] === 'cal' && (p[1] === 'seco' || p[1] === 'mojado') && p.length === 2) {
+          const seco = p[1] === 'seco' ? s.crudoHum : s.seco, mojado = p[1] === 'mojado' ? s.crudoHum : s.mojado;
+          if (Math.abs(seco - mojado) < 50) { decir('>> Error: seco y mojado deben diferir al menos 50 (rango 0-1023)'); continue; }
+          s.seco = seco; s.mojado = mojado;
+          reiniciarBase(); decir('>> Calibracion guardada'); decir('>> Linea base reiniciada'); decir(cfg());
+        } else if (p[0] === 'umb' && p.length === 4 && s.lim[p[1]]) {
+          const am = parseFloat(p[2]), ro = parseFloat(p[3]);
+          const max = { hum: 100, inc: 45, dis: 60 }[p[1]];
+          if (!(am > 0 && ro > am && ro <= max)) { decir('>> Error: limites fuera de rango (0 < amarilla < roja)'); continue; }
+          s.lim[p[1]] = [am, ro];
+          decir('>> Limites guardados'); decir(cfg());
+        } else decir('>> Error: comando no reconocido');
+      }
+    };
+    return s;
+  }
+
+  function conectarSimulado() {
+    prepararAudio();
+    modo = 'sim';
+    estado = 'conectando';
+    sim = crearSimulador();
+    pintarConexion();
+    ponerStatus('n', 'Conectando con el simulador…');
+    sim.iniciar();
+  }
+
+  construirLimites();
+  pintarAjustes();
+  pintarBitacora();
+  document.body.classList.add('stale');
+  requestAnimationFrame(dibujarGrafica);
+</script>
 </body>
 </html>
