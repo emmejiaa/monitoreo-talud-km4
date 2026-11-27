@@ -1057,12 +1057,12 @@
       hum_am: s.lim.hum[0], hum_ro: s.lim.hum[1], inc_am: s.lim.inc[0], inc_ro: s.lim.inc[1],
       dis_am: s.lim.dis[0], dis_ro: s.lim.dis[1],
     });
-    const reiniciarBase = () => { s.actual[0] = humedad(s.crudoHum); s.base = s.actual.slice(); };
+    const reiniciarBase = () => { s.baseCrudoHum = s.crudoHum; s.base = s.actual.slice(); };
     const enviarLectura = () => {
       s.segundos++;
       medir();
       const [hum, inc, dis] = s.actual;
-      const dh = hum - s.base[0], di = Math.abs(inc - s.base[1]), dd = dis - s.base[2];
+      const dh = hum - humedad(s.baseCrudoHum), di = Math.abs(inc - s.base[1]), dd = dis - s.base[2];
       const a = Math.max(nivel(dh, 'hum'), nivel(di, 'inc'), nivel(Math.abs(dd), 'dis'));
       const f = (v) => Number(v.toFixed(2));
       procesarLinea(JSON.stringify({
@@ -1074,7 +1074,7 @@
       s.timers.push(setTimeout(() => {
         alConectar();
         medir();
-        s.base = s.actual.slice();
+        reiniciarBase();
         s.timers.push(setInterval(enviarLectura, 1000));
       }, 1200));
     };
@@ -1087,12 +1087,12 @@
         else if (p[0] === 'cfg') decir(cfg());
         else if (p[0] === 'fabrica') {
           s.seco = 800; s.mojado = 350; s.lim = { hum: [15, 25], inc: [2.5, 5], dis: [3, 6] };
-          reiniciarBase(); decir('>> Valores de fabrica restaurados'); decir('>> Linea base reiniciada'); decir(cfg());
+          decir('>> Valores de fabrica restaurados'); decir(cfg());
         } else if (p[0] === 'cal' && (p[1] === 'seco' || p[1] === 'mojado') && p.length === 2) {
           const seco = p[1] === 'seco' ? s.crudoHum : s.seco, mojado = p[1] === 'mojado' ? s.crudoHum : s.mojado;
           if (Math.abs(seco - mojado) < 50) { decir('>> Error: seco y mojado deben diferir al menos 50 (rango 0-1023)'); continue; }
           s.seco = seco; s.mojado = mojado;
-          reiniciarBase(); decir('>> Calibracion guardada'); decir('>> Linea base reiniciada'); decir(cfg());
+          decir('>> Calibracion guardada'); decir(cfg());
         } else if (p[0] === 'umb' && p.length === 4 && s.lim[p[1]]) {
           const am = parseFloat(p[2]), ro = parseFloat(p[3]);
           const max = { hum: 100, inc: 45, dis: 60 }[p[1]];

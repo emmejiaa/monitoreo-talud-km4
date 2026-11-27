@@ -71,6 +71,9 @@ struct Lectura {
 Lectura lecturaActual = {0, 0, 0, 0, 0, 0};
 Lectura lineaBase     = {0, 0, 0, 0, 0, 0};
 int crudoHumedad      = 0;
+// La referencia de humedad se guarda en lectura cruda para que siga valiendo
+// si cambia la calibración
+float baseCrudoHumedad = 0;
 int crudoExtensometro = 0;
 int nivelAlerta = 0;
 
@@ -131,11 +134,20 @@ int leerPromedio(int pin, int muestras) {
   return suma / muestras;
 }
 
-float humedadDesdeCrudo(int raw) {
+float humedadDesdeCrudo(float raw) {
   float pct = 100.0 * (cfg.humSeco - raw) / (float)(cfg.humSeco - cfg.humMojado);
   if (pct < 0) pct = 0;
   if (pct > 100) pct = 100;
   return pct;
+}
+
+float cambioHumedad() {
+  return lecturaActual.humedad - humedadDesdeCrudo(baseCrudoHumedad);
+}
+
+void aplicarCalibracion() {
+  lecturaActual.humedad = humedadDesdeCrudo(crudoHumedad);
+  lineaBase.humedad = humedadDesdeCrudo(baseCrudoHumedad);
 }
 
 // Mensaje de texto por USB y por Bluetooth
@@ -302,7 +314,7 @@ int nivelPorDelta(float delta, float amarillo, float rojo) {
 
 int calcularNivelAlerta() {
   // Humedad: solo subida importa (bajada es drenaje normal)
-  float dHum = lecturaActual.humedad - lineaBase.humedad;
+  float dHum = cambioHumedad();
   float dDis = fabs(cambioDesplazamiento());
 
   int nivel = max(nivelPorDelta(dHum, cfg.humAmarillo, cfg.humRojo),
@@ -325,7 +337,7 @@ void enviarDatos(Stream &out) {
   out.print(F("{\"hum\":"));     out.print(lecturaActual.humedad, 2);
   out.print(F(",\"inc\":"));     out.print(lecturaActual.inclinacion, 2);
   out.print(F(",\"dis\":"));     out.print(lecturaActual.desplazamiento, 2);
-  out.print(F(",\"dhum\":"));    out.print(lecturaActual.humedad - lineaBase.humedad, 2);
+  out.print(F(",\"dhum\":"));    out.print(cambioHumedad(), 2);
   out.print(F(",\"dinc\":"));    out.print(cambioInclinacion(), 2);
   out.print(F(",\"ddis\":"));    out.print(cambioDesplazamiento(), 2);
   out.print(F(",\"a\":"));       out.print(nivelAlerta);
@@ -356,11 +368,12 @@ void enviarConfig() {
 // Promedia varias lecturas para que la referencia no quede corrida por el ruido.
 // Hay que tener el montaje quieto mientras tanto (menos de medio segundo).
 void tomarLineaBase() {
-  float hum = 0, dis = 0, gx = 0, gy = 0, gz = 0;
+  long crudoHum = 0;
+  float dis = 0, gx = 0, gy = 0, gz = 0;
   byte conMpu = 0, conExt = 0;
   for (byte i = 0; i < MUESTRAS_LINEA_BASE; i++) {
     leerSensores();
-    hum += lecturaActual.humedad;
+    crudoHum += crudoHumedad;
     if (extOk) {
       dis += lecturaActual.desplazamiento;
       conExt++;
@@ -374,7 +387,8 @@ void tomarLineaBase() {
     delay(10);
   }
   lineaBase = lecturaActual;
-  lineaBase.humedad = hum / MUESTRAS_LINEA_BASE;
+  baseCrudoHumedad = crudoHum / (float)MUESTRAS_LINEA_BASE;
+  lineaBase.humedad = humedadDesdeCrudo(baseCrudoHumedad);
   // Un sensor que no estaba conectado toma su referencia cuando aparezca
   baseDisOk = conExt > 0;
   if (baseDisOk) lineaBase.desplazamiento = dis / conExt;
@@ -427,9 +441,10 @@ void comandoCal() {
   cfg.humMojado = mojado;
   guardarConfig();
   avisar(F(">> Calibracion guardada"));
-  // Con la calibración nueva la humedad en % cambia de golpe; se toma como
-  // nueva referencia para que no salte una alerta falsa
-  reiniciarLineaBase();
+  // No se retoma la línea base: al calibrar "mojado" el sensor está en agua
+  // y la referencia quedaría en 100 %. Como está guardada en lectura cruda,
+  // sigue valiendo con la calibración nueva.
+  aplicarCalibracion();
   enviarConfig();
 }
 
@@ -480,7 +495,7 @@ void ejecutarComando(char *linea) {
     cfg = CONFIG_FABRICA;
     guardarConfig();
     avisar(F(">> Valores de fabrica restaurados"));
-    reiniciarLineaBase();
+    aplicarCalibracion();
     enviarConfig();
   } else {
     avisar(F(">> Error: comando no reconocido"));

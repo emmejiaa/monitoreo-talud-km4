@@ -12,7 +12,7 @@ class EnlaceSimulado implements Enlace {
       _lineas.add('Prototipo Km 4 (Arduino UNO) - iniciando');
       _lineas.add('[OK] Linea base inicial establecida');
       _medir();
-      _base = List.of(_actual);
+      _reiniciarBase();
       _envio = Timer.periodic(const Duration(seconds: 1), (_) => _enviarLectura());
     });
   }
@@ -32,6 +32,7 @@ class EnlaceSimulado implements Enlace {
   };
 
   int _crudoHum = 557;
+  int _baseCrudoHum = 557;
   int _crudoDis = 513;
   List<double> _actual = [54, 1.2, 30.12];
   List<double> _base = [54, 1.2, 30.12];
@@ -77,7 +78,7 @@ class EnlaceSimulado implements Enlace {
     _segundos++;
     _medir();
     final [hum, inc, dis] = _actual;
-    final dHum = hum - _base[0], dInc = inc - _base[1], dDis = dis - _base[2];
+    final dHum = hum - _humedad(_baseCrudoHum), dInc = inc - _base[1], dDis = dis - _base[2];
     final nivel = [
       _nivelPorDelta(dHum, 'hum'),
       _nivelPorDelta(dInc.abs(), 'inc'),
@@ -108,7 +109,7 @@ class EnlaceSimulado implements Enlace {
   }
 
   void _reiniciarBase() {
-    _actual[0] = _humedad(_crudoHum);
+    _baseCrudoHum = _crudoHum;
     _base = List.of(_actual);
   }
 
@@ -135,8 +136,7 @@ class EnlaceSimulado implements Enlace {
           ..['hum'] = [15, 25]
           ..['inc'] = [2.5, 5]
           ..['dis'] = [3, 6];
-        _reiniciarBase();
-        return ['>> Valores de fabrica restaurados', '>> Linea base reiniciada', _config()];
+        return ['>> Valores de fabrica restaurados', _config()];
       case 'cal':
         var seco = _seco, mojado = _mojado;
         if (p.length == 2 && p[1] == 'seco') {
@@ -151,8 +151,7 @@ class EnlaceSimulado implements Enlace {
         }
         _seco = seco;
         _mojado = mojado;
-        _reiniciarBase();
-        return ['>> Calibracion guardada', '>> Linea base reiniciada', _config()];
+        return ['>> Calibracion guardada', _config()];
       case 'umb':
         final maximo = {'hum': 100.0, 'inc': 45.0, 'dis': 60.0};
         final am = p.length == 4 ? double.tryParse(p[2]) : null;

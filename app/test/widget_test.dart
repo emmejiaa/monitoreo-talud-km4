@@ -360,6 +360,15 @@ void main() {
     await t.pump(const Duration(milliseconds: 300));
     expect(lineas.last, '>> Linea base reiniciada');
 
+    final antes = lineas.length;
+    await sim.enviar('cal seco\n');
+    await t.pump(const Duration(milliseconds: 1300));
+    final nuevas = lineas.sublist(antes);
+    expect(nuevas, contains('>> Calibracion guardada'));
+    expect(nuevas, isNot(contains('>> Linea base reiniciada')));
+    final ultima = nuevas.map(Lectura.desdeLinea).whereType<Lectura>().last;
+    expect(ultima.dHumedad.abs(), lessThan(3));
+
     sub.cancel();
     sim.cerrar();
     await t.pump();
