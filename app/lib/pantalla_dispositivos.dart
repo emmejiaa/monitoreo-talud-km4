@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_classic_bluetooth/flutter_classic_bluetooth.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,12 +13,39 @@ import 'tema.dart';
 
 const claveDireccion = 'hc05_direccion';
 const claveNombre = 'hc05_nombre';
+const claveTipo = 'hc05_tipo';
 
-PantallaMonitor crearPantallaMonitor(String direccion, String nombre) => PantallaMonitor(
+PantallaMonitor crearPantallaMonitor(String direccion, String nombre, {bool ble = false}) =>
+    PantallaMonitor(
       nombre: nombre,
-      crearEnlace: () => EnlaceBluetooth(direccion),
+      crearEnlace: () => EnlaceBluetooth(direccion, ble: ble),
       alertas: AlertasAndroid(),
     );
+
+class Emparejado {
+  const Emparejado(this.direccion, this.nombre, this.tipo);
+  final String direccion;
+  final String? nombre;
+  final String tipo;
+
+  String get nombreVisible => (nombre ?? '').trim().isEmpty ? direccion : nombre!;
+  bool get esBle => tipo == 'le';
+}
+
+const _canalBluetooth = MethodChannel('km4/bluetooth');
+
+Future<List<Emparejado>> _leerEmparejados(FlutterClassicBluetooth bt) async {
+  try {
+    final lista = await _canalBluetooth.invokeListMethod<Map>('emparejados') ?? [];
+    return [
+      for (final m in lista)
+        Emparejado(m['direccion'] as String, m['nombre'] as String?, m['tipo'] as String? ?? ''),
+    ];
+  } on MissingPluginException {
+    final lista = await bt.getPairedDevices();
+    return [for (final d in lista) Emparejado(d.address, d.name, 'clasico')];
+  }
+}
 
 enum _Problema { noSoportado, permiso, permisoBloqueado, apagado, error }
 
@@ -34,7 +62,7 @@ class _PantallaDispositivosState extends State<PantallaDispositivos> with Widget
   bool _cargando = true;
   _Problema? _problema;
   String? _detalleError;
-  List<BtcDevice> _dispositivos = [];
+  List<Emparejado> _dispositivos = [];
 
   @override
   void initState() {
@@ -77,7 +105,7 @@ class _PantallaDispositivosState extends State<PantallaDispositivos> with Widget
     setState(() => _cargando = true);
     _Problema? problema;
     String? detalle;
-    var lista = <BtcDevice>[];
+    var lista = <Emparejado>[];
     try {
       if (!await _bt.isSupported()) {
         problema = _Problema.noSoportado;
@@ -94,16 +122,19 @@ class _PantallaDispositivosState extends State<PantallaDispositivos> with Widget
         } else if (!await _bt.isEnabled()) {
           problema = _Problema.apagado;
         } else {
-          lista = await _bt.getPairedDevices();
+          lista = await _leerEmparejados(_bt);
           lista.sort((a, b) {
             final ha = _esHc(a) ? 0 : 1;
             final hb = _esHc(b) ? 0 : 1;
             if (ha != hb) return ha - hb;
-            return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
+            return a.nombreVisible.toLowerCase().compareTo(b.nombreVisible.toLowerCase());
           });
         }
       }
     } on BtcException catch (e) {
+      problema = _Problema.error;
+      detalle = e.message;
+    } on PlatformException catch (e) {
       problema = _Problema.error;
       detalle = e.message;
     } catch (e) {
@@ -119,15 +150,18 @@ class _PantallaDispositivosState extends State<PantallaDispositivos> with Widget
     });
   }
 
-  static bool _esHc(BtcDevice d) => (d.name ?? '').toUpperCase().contains('HC-0');
+  static bool _esHc(Emparejado d) => (d.nombre ?? '').toUpperCase().contains('HC-0');
 
-  Future<void> _elegir(BtcDevice d) async {
+  Future<void> _elegir(Emparejado d) async {
     final prefs = SharedPreferencesAsync();
-    await prefs.setString(claveDireccion, d.address);
-    await prefs.setString(claveNombre, d.displayName);
+    await prefs.setString(claveDireccion, d.direccion);
+    await prefs.setString(claveNombre, d.nombreVisible);
+    await prefs.setString(claveTipo, d.tipo);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => crearPantallaMonitor(d.address, d.displayName)),
+      MaterialPageRoute(
+        builder: (_) => crearPantallaMonitor(d.direccion, d.nombreVisible, ble: d.esBle),
+      ),
     );
   }
 
@@ -241,8 +275,8 @@ class _PantallaDispositivosState extends State<PantallaDispositivos> with Widget
                 foregroundColor: _esHc(d) ? Colors.white : Colores.textoSuave,
                 child: const Icon(Icons.bluetooth),
               ),
-              title: Text(d.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(d.address),
+              title: Text(d.nombreVisible, style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(d.esBle ? '${d.direccion}  ·  Bluetooth LE' : d.direccion),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _elegir(d),
             ),

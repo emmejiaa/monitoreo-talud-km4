@@ -38,6 +38,7 @@ const unsigned long INTERVALO_LECTURA_MS   = 200;
 const unsigned long MPU_INIT_TIMEOUT_MS    = 800;
 const unsigned long MPU_REINTENTO_MS       = 5000;
 const byte MPU_FALLOS_PARA_PERDIDO         = 5;
+const byte EXT_LECTURAS_PARA_CAMBIO        = 3;
 const byte MUESTRAS_LINEA_BASE             = 16;
 const unsigned long INTERVALO_ENVIO_USB_MS = 400;
 // SoftwareSerial no recibe mientras transmite: se envía por Bluetooth con
@@ -77,6 +78,10 @@ bool mpuOk = false;
 bool baseInclinacionOk = false;
 byte fallosMpu = 0;
 unsigned long ultimoIntentoMpu = 0;
+
+bool extOk = false;
+bool baseDisOk = false;
+byte extLecturasDistintas = 0;
 
 struct LectorComandos {
   char buf[40];
@@ -219,12 +224,74 @@ void leerInclinacion() {
   }
 }
 
+// Convierte el canal interno de 0 V para dejar descargado el condensador
+// de muestreo del ADC
+void descargarAdc() {
+  ADMUX = (ADMUX & 0xF0) | 0x0F;
+  ADCSRA |= _BV(ADSC);
+  while (ADCSRA & _BV(ADSC)) {}
+}
+
+// Un pin analógico al aire no lee 0: copia lo que quedó en el ADC y da
+// valores falsos. Con la resistencia interna de pull-up un pin al aire sube
+// a 5 V y luego, cada vez que se descarga el ADC, se va cayendo; el
+// potenciómetro, en cambio, mantiene su voltaje en las dos pruebas.
+bool extensometroPresente() {
+  pinMode(PIN_EXTENSOMETRO, INPUT_PULLUP);
+  delayMicroseconds(50);
+  int conPullup = analogRead(PIN_EXTENSOMETRO);
+  pinMode(PIN_EXTENSOMETRO, INPUT);
+  if (conPullup < 1000) return true;
+  int v = 0;
+  for (byte i = 0; i < 10; i++) {
+    descargarAdc();
+    v = analogRead(PIN_EXTENSOMETRO);
+  }
+  return v >= 960;
+}
+
+void olvidarDesplazamiento() {
+  lecturaActual.desplazamiento = 0;
+  crudoExtensometro = 0;
+}
+
+// Cambia de estado solo si varias lecturas seguidas coinciden
+void revisarExtensometro(bool presente) {
+  if (presente == extOk) {
+    extLecturasDistintas = 0;
+    return;
+  }
+  if (++extLecturasDistintas < EXT_LECTURAS_PARA_CAMBIO) return;
+  extLecturasDistintas = 0;
+  extOk = presente;
+  if (extOk) {
+    avisar(F("[OK] Extensometro conectado"));
+  } else {
+    olvidarDesplazamiento();
+    avisar(F("[!!] Se perdio la conexion con el extensometro"));
+  }
+}
+
 void leerSensores() {
-  crudoHumedad      = leerPromedio(PIN_HUMEDAD, 5);
-  crudoExtensometro = leerPromedio(PIN_EXTENSOMETRO, 5);
-  lecturaActual.humedad        = humedadDesdeCrudo(crudoHumedad);
-  lecturaActual.desplazamiento = (crudoExtensometro / 1023.0) * EXT_RECORRIDO_MM;
+  crudoHumedad          = leerPromedio(PIN_HUMEDAD, 5);
+  lecturaActual.humedad = humedadDesdeCrudo(crudoHumedad);
+
+  bool presente = extensometroPresente();
+  revisarExtensometro(presente);
+  if (presente && extOk) {
+    crudoExtensometro = leerPromedio(PIN_EXTENSOMETRO, 5);
+    lecturaActual.desplazamiento = (crudoExtensometro / 1023.0) * EXT_RECORRIDO_MM;
+    if (!baseDisOk) {
+      lineaBase.desplazamiento = lecturaActual.desplazamiento;
+      baseDisOk = true;
+    }
+  }
   leerInclinacion();
+}
+
+float cambioDesplazamiento() {
+  if (!extOk || !baseDisOk) return 0;
+  return lecturaActual.desplazamiento - lineaBase.desplazamiento;
 }
 
 int nivelPorDelta(float delta, float amarillo, float rojo) {
@@ -236,7 +303,7 @@ int nivelPorDelta(float delta, float amarillo, float rojo) {
 int calcularNivelAlerta() {
   // Humedad: solo subida importa (bajada es drenaje normal)
   float dHum = lecturaActual.humedad - lineaBase.humedad;
-  float dDis = fabs(lecturaActual.desplazamiento - lineaBase.desplazamiento);
+  float dDis = fabs(cambioDesplazamiento());
 
   int nivel = max(nivelPorDelta(dHum, cfg.humAmarillo, cfg.humRojo),
                   nivelPorDelta(dDis, cfg.disAmarillo, cfg.disRojo));
@@ -260,9 +327,10 @@ void enviarDatos(Stream &out) {
   out.print(F(",\"dis\":"));     out.print(lecturaActual.desplazamiento, 2);
   out.print(F(",\"dhum\":"));    out.print(lecturaActual.humedad - lineaBase.humedad, 2);
   out.print(F(",\"dinc\":"));    out.print(cambioInclinacion(), 2);
-  out.print(F(",\"ddis\":"));    out.print(lecturaActual.desplazamiento - lineaBase.desplazamiento, 2);
+  out.print(F(",\"ddis\":"));    out.print(cambioDesplazamiento(), 2);
   out.print(F(",\"a\":"));       out.print(nivelAlerta);
   out.print(F(",\"inc_ok\":"));  out.print(mpuOk ? F("true") : F("false"));
+  out.print(F(",\"dis_ok\":"));  out.print(extOk ? F("true") : F("false"));
   out.print(F(",\"hum_raw\":")); out.print(crudoHumedad);
   out.print(F(",\"dis_raw\":")); out.print(crudoExtensometro);
   out.println(F("}"));
@@ -289,11 +357,14 @@ void enviarConfig() {
 // Hay que tener el montaje quieto mientras tanto (menos de medio segundo).
 void tomarLineaBase() {
   float hum = 0, dis = 0, gx = 0, gy = 0, gz = 0;
-  byte conMpu = 0;
+  byte conMpu = 0, conExt = 0;
   for (byte i = 0; i < MUESTRAS_LINEA_BASE; i++) {
     leerSensores();
     hum += lecturaActual.humedad;
-    dis += lecturaActual.desplazamiento;
+    if (extOk) {
+      dis += lecturaActual.desplazamiento;
+      conExt++;
+    }
     if (mpuOk) {
       gx += lecturaActual.gx;
       gy += lecturaActual.gy;
@@ -304,13 +375,15 @@ void tomarLineaBase() {
   }
   lineaBase = lecturaActual;
   lineaBase.humedad = hum / MUESTRAS_LINEA_BASE;
-  lineaBase.desplazamiento = dis / MUESTRAS_LINEA_BASE;
-  if (conMpu > 0) {
+  // Un sensor que no estaba conectado toma su referencia cuando aparezca
+  baseDisOk = conExt > 0;
+  if (baseDisOk) lineaBase.desplazamiento = dis / conExt;
+  baseInclinacionOk = conMpu > 0;
+  if (baseInclinacionOk) {
     lineaBase.gx = gx / conMpu;
     lineaBase.gy = gy / conMpu;
     lineaBase.gz = gz / conMpu;
     lineaBase.inclinacion = inclinacionDesde(lineaBase.gx, lineaBase.gy, lineaBase.gz);
-    baseInclinacionOk = true;
   }
 }
 
@@ -517,6 +590,16 @@ void setup() {
     avisar(F("[OK] MPU6050 detectado"));
   } else {
     avisar(F("[!!] MPU6050 no detectado - operando sin inclinacion"));
+  }
+
+  baseDisOk = false;
+  extLecturasDistintas = 0;
+  extOk = extensometroPresente();
+  if (extOk) {
+    avisar(F("[OK] Extensometro detectado"));
+  } else {
+    olvidarDesplazamiento();
+    avisar(F("[!!] Extensometro no detectado - operando sin desplazamiento"));
   }
 
   delay(500);

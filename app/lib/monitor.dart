@@ -21,7 +21,7 @@ class Punto {
   final DateTime hora;
   final double dHumedad;
   final double? dInclinacion;
-  final double dDesplazamiento;
+  final double? dDesplazamiento;
 }
 
 enum TipoEvento { conexion, normal, amarilla, roja, base, ajuste }
@@ -178,7 +178,7 @@ class Monitor extends ChangeNotifier {
       if (l.dHumedad >= c.humedad.amarillo) 'humedad ${_signo(l.dHumedad, 1)} %',
       if (l.inclinometroOk && l.dInclinacion.abs() >= c.inclinacion.amarillo)
         'inclinación ${_signo(l.dInclinacion, 2)}°',
-      if (l.dDesplazamiento.abs() >= c.desplazamiento.amarillo)
+      if (l.extensometroOk && l.dDesplazamiento.abs() >= c.desplazamiento.amarillo)
         'desplazamiento ${_signo(l.dDesplazamiento, 2)} mm',
     ];
     return causas.isEmpty ? '' : ' — ${causas.join(', ')}';
@@ -253,7 +253,12 @@ class Monitor extends ChangeNotifier {
       _conectadoDesde ??= _ultimoDato;
       _registrar(TipoEvento.conexion, 'Conectado al Arduino');
     }
-    historial.add(Punto(ahora, l.dHumedad, l.inclinometroOk ? l.dInclinacion : null, l.dDesplazamiento));
+    historial.add(Punto(
+      ahora,
+      l.dHumedad,
+      l.inclinometroOk ? l.dInclinacion : null,
+      l.extensometroOk ? l.dDesplazamiento : null,
+    ));
     while (historial.isNotEmpty && ahora.difference(historial.first.hora) > ventanaGrafica) {
       historial.removeAt(0);
     }

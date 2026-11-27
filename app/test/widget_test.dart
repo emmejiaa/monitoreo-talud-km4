@@ -89,6 +89,12 @@ void main() {
       expect(l.crudoDesplazamiento, 513);
     });
 
+    test('dis_ok: sin el campo (firmware viejo) cuenta como conectado', () {
+      expect(Lectura.desdeLinea(lineaNormal)!.extensometroOk, true);
+      final sinExt = lineaNormal.replaceFirst('"inc_ok":false', '"inc_ok":false,"dis_ok":false');
+      expect(Lectura.desdeLinea(sinExt)!.extensometroOk, false);
+    });
+
     test('ignora mensajes de texto, líneas cortadas y la línea de ajustes', () {
       expect(Lectura.desdeLinea('[OK] Linea base inicial establecida'), isNull);
       expect(Lectura.desdeLinea('{"hum":54.00,"inc":0.0'), isNull);
@@ -383,6 +389,14 @@ void main() {
     await t.tap(find.text('Inclinación'));
     await t.pump();
     expect(find.text('Sensor de inclinación no conectado'), findsOneWidget);
+
+    enlace.lineasCtl.add(lineaNormal.replaceFirst('"inc_ok":false', '"inc_ok":false,"dis_ok":false'));
+    await t.pump();
+    expect(find.text('N/D'), findsNWidgets(2));
+    expect(find.text('crudo: 513'), findsNothing);
+    await t.tap(find.text('Desplaz.'));
+    await t.pump();
+    expect(find.text('Extensómetro no conectado'), findsOneWidget);
 
     await t.tap(find.byTooltip('Calibración y límites'));
     await t.pumpAndSettle();

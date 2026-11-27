@@ -8,15 +8,17 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   String? direccion;
   String? nombre;
+  String? tipo;
   try {
     final prefs = SharedPreferencesAsync();
     direccion = await prefs.getString(claveDireccion);
     nombre = await prefs.getString(claveNombre);
+    tipo = await prefs.getString(claveTipo);
   } catch (_) {}
   runApp(AppKm4(
     inicio: direccion == null
         ? const PantallaDispositivos()
-        : crearPantallaMonitor(direccion, nombre ?? direccion),
+        : crearPantallaMonitor(direccion, nombre ?? direccion, ble: tipo == 'le'),
   ));
 }
 

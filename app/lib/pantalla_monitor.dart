@@ -61,11 +61,15 @@ class _PantallaMonitorState extends State<PantallaMonitor> {
 
   Widget _tarjetaGrafica(Monitor m) {
     final l = m.lectura;
-    final sinInclinometro = _sensorGrafica == 'inc' && l != null && !l.inclinometroOk;
+    final sinSensor = switch (_sensorGrafica) {
+      'inc' when l != null && !l.inclinometroOk => 'Sensor de inclinación no conectado',
+      'dis' when l != null && !l.extensometroOk => 'Extensómetro no conectado',
+      _ => null,
+    };
     final (valor, texto) = switch (_sensorGrafica) {
       'hum' => ((Punto p) => p.dHumedad, 'Cuánto subió la humedad respecto a la línea base (%)'),
       'inc' => ((Punto p) => p.dInclinacion?.abs(), 'Cambio de inclinación respecto a la línea base (°)'),
-      _ => ((Punto p) => p.dDesplazamiento.abs(), 'Desplazamiento respecto a la línea base (mm)'),
+      _ => ((Punto p) => p.dDesplazamiento?.abs(), 'Desplazamiento respecto a la línea base (mm)'),
     };
     return Card(
       child: Padding(
@@ -101,12 +105,11 @@ class _PantallaMonitorState extends State<PantallaMonitor> {
               ),
             ),
             const SizedBox(height: 12),
-            if (sinInclinometro)
-              const SizedBox(
+            if (sinSensor != null)
+              SizedBox(
                 height: 190,
                 child: Center(
-                  child: Text('Sensor de inclinación no conectado',
-                      style: TextStyle(color: Colores.textoSuave)),
+                  child: Text(sinSensor, style: const TextStyle(color: Colores.textoSuave)),
                 ),
               )
             else
@@ -238,15 +241,25 @@ class _PantallaMonitorState extends State<PantallaMonitor> {
                     vigente: vigente,
                   ),
                 const SizedBox(height: 10),
-                TarjetaSensor(
-                  titulo: 'Desplazamiento',
-                  icono: Icons.straighten,
-                  valor: _num(l?.desplazamiento, 2),
-                  unidad: 'mm',
-                  detalle: 'Δ ${_delta(l?.dDesplazamiento, 2)} mm',
-                  crudo: l?.crudoDesplazamiento,
-                  vigente: vigente,
-                ),
+                if (l != null && !l.extensometroOk)
+                  const TarjetaSensor(
+                    titulo: 'Desplazamiento',
+                    icono: Icons.straighten,
+                    valor: 'N/D',
+                    unidad: '',
+                    detalle: 'Sensor no conectado',
+                    vigente: false,
+                  )
+                else
+                  TarjetaSensor(
+                    titulo: 'Desplazamiento',
+                    icono: Icons.straighten,
+                    valor: _num(l?.desplazamiento, 2),
+                    unidad: 'mm',
+                    detalle: 'Δ ${_delta(l?.dDesplazamiento, 2)} mm',
+                    crudo: l?.crudoDesplazamiento,
+                    vigente: vigente,
+                  ),
                 const SizedBox(height: 10),
                 _tarjetaGrafica(m),
                 const SizedBox(height: 20),

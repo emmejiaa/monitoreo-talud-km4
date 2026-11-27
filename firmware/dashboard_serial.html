@@ -395,11 +395,20 @@
     ultimaLectura = d;
     document.body.classList.remove('stale');
     $('hraw').textContent = 'lectura cruda: ' + d.hum_raw;
-    $('draw').textContent = 'lectura cruda: ' + d.dis_raw;
     $('humedad').textContent = d.hum.toFixed(1);
-    $('desplazamiento').textContent = d.dis.toFixed(2);
     $('dhum').textContent = 'Δ ' + signo(d.dhum, 1) + ' %';
-    $('ddis').textContent = 'Δ ' + signo(d.ddis, 2) + ' mm';
+
+    const disOk = d.dis_ok !== false;
+    $('cardDis').classList.toggle('off', !disOk);
+    if (disOk) {
+      $('desplazamiento').textContent = d.dis.toFixed(2);
+      $('ddis').textContent = 'Δ ' + signo(d.ddis, 2) + ' mm';
+      $('draw').textContent = 'lectura cruda: ' + d.dis_raw;
+    } else {
+      $('desplazamiento').textContent = 'N/D';
+      $('ddis').textContent = 'sensor no conectado';
+      $('draw').textContent = 'lectura cruda: --';
+    }
 
     const cardInc = $('cardInc');
     if (d.inc_ok) {
@@ -419,7 +428,7 @@
       t: ultimoDato,
       hum: d.dhum,
       inc: d.inc_ok ? Math.abs(d.dinc) : null,
-      dis: Math.abs(d.ddis),
+      dis: disOk ? Math.abs(d.ddis) : null,
     });
     while (historial.length && ultimoDato - historial[0].t > VENTANA_MS) historial.shift();
     registrarNivel(d);
@@ -494,7 +503,7 @@
     const lista = [];
     if (d.dhum >= c.hum[0]) lista.push('humedad ' + signo(d.dhum, 1) + ' %');
     if (d.inc_ok && Math.abs(d.dinc) >= c.inc[0]) lista.push('inclinación ' + signo(d.dinc, 2) + '°');
-    if (Math.abs(d.ddis) >= c.dis[0]) lista.push('desplazamiento ' + signo(d.ddis, 2) + ' mm');
+    if (d.dis_ok !== false && Math.abs(d.ddis) >= c.dis[0]) lista.push('desplazamiento ' + signo(d.ddis, 2) + ' mm');
     return lista.length ? ' — ' + lista.join(', ') : '';
   }
 
@@ -571,11 +580,15 @@
     g.font = '10px -apple-system, "Segoe UI", sans-serif';
     $('pieGrafica').textContent = PIE_GRAFICA[sensorGrafica];
 
-    if (sensorGrafica === 'inc' && ultimaLectura && !ultimaLectura.inc_ok) {
+    const sinSensor = ultimaLectura &&
+      ((sensorGrafica === 'inc' && !ultimaLectura.inc_ok) ||
+       (sensorGrafica === 'dis' && ultimaLectura.dis_ok === false));
+    if (sinSensor) {
       g.fillStyle = '#6B7780';
       g.font = '13px -apple-system, "Segoe UI", sans-serif';
       g.textAlign = 'center';
-      g.fillText('Sensor de inclinación no conectado', ancho / 2, alto / 2);
+      g.fillText(sensorGrafica === 'inc' ? 'Sensor de inclinación no conectado' : 'Extensómetro no conectado',
+        ancho / 2, alto / 2);
       return;
     }
 
@@ -1054,7 +1067,7 @@
       const f = (v) => Number(v.toFixed(2));
       procesarLinea(JSON.stringify({
         hum: f(hum), inc: f(inc), dis: f(dis), dhum: f(dh), dinc: f(di), ddis: f(dd),
-        a, inc_ok: true, hum_raw: s.crudoHum, dis_raw: s.crudoDis,
+        a, inc_ok: true, dis_ok: true, hum_raw: s.crudoHum, dis_raw: s.crudoDis,
       }));
     };
     s.iniciar = () => {

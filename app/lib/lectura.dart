@@ -10,6 +10,7 @@ class Lectura {
     required this.dDesplazamiento,
     required this.alerta,
     required this.inclinometroOk,
+    this.extensometroOk = true,
     this.crudoHumedad,
     this.crudoDesplazamiento,
   });
@@ -22,6 +23,7 @@ class Lectura {
   final double dDesplazamiento;
   final int alerta;
   final bool inclinometroOk;
+  final bool extensometroOk;
   final int? crudoHumedad;
   final int? crudoDesplazamiento;
 
@@ -46,6 +48,7 @@ class Lectura {
         dDesplazamiento: n('ddis'),
         alerta: alerta,
         inclinometroOk: m['inc_ok'] == true,
+        extensometroOk: m['dis_ok'] != false,
         crudoHumedad: (m['hum_raw'] as num?)?.toInt(),
         crudoDesplazamiento: (m['dis_raw'] as num?)?.toInt(),
       );

@@ -86,7 +86,7 @@ class EnlaceSimulado implements Enlace {
     String f(double v) => v.toStringAsFixed(2);
     _lineas.add('{"hum":${f(hum)},"inc":${f(inc)},"dis":${f(dis)},'
         '"dhum":${f(dHum)},"dinc":${f(dInc)},"ddis":${f(dDis)},'
-        '"a":$nivel,"inc_ok":true,'
+        '"a":$nivel,"inc_ok":true,"dis_ok":true,'
         '"hum_raw":$_crudoHum,"dis_raw":$_crudoDis}');
   }
 

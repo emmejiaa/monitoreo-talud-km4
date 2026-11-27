@@ -43,6 +43,8 @@ Son los valores de fábrica. Se pueden cambiar desde la app o el dashboard sin r
 
 El MPU6050 se lee directo por I2C, sin librerías, así que también funciona con los GY-521 clon que la librería de Adafruit rechaza. Es opcional: si no está conectado, el firmware sigue funcionando, la inclinación aparece como "N/D" y, si se conecta después o se suelta un cable, se detecta solo en unos segundos.
 
+El extensómetro también es opcional. Un pin analógico sin nada conectado no lee 0 sino valores al azar, así que el firmware revisa en cada lectura si en A1 hay un potenciómetro (con la resistencia interna de pull-up). Si no lo hay, muestra "N/D" en vez de un desplazamiento falso y no da alerta por ese sensor.
+
 ## Firmware
 
 1. Instalar Arduino IDE 2.x. No hace falta ninguna librería adicional.
@@ -52,10 +54,10 @@ El MPU6050 se lee directo por I2C, sin librerías, así que también funciona co
 Los datos salen como una línea JSON: por USB cada 400 ms y por Bluetooth cada 1 s.
 
 ```json
-{"hum":54.00,"inc":0.00,"dis":30.12,"dhum":0.00,"dinc":0.00,"ddis":0.00,"a":0,"inc_ok":false,"hum_raw":557,"dis_raw":513}
+{"hum":54.00,"inc":0.00,"dis":30.12,"dhum":0.00,"dinc":0.00,"ddis":0.00,"a":0,"inc_ok":false,"dis_ok":true,"hum_raw":557,"dis_raw":513}
 ```
 
-`a` es el nivel de alerta (0 verde, 1 amarilla, 2 roja). Los campos que empiezan por `d` son el cambio respecto a la línea base (`dinc` es el ángulo entre la posición de referencia y la actual, siempre positivo), e `inc_ok` indica si el MPU6050 respondió.
+`a` es el nivel de alerta (0 verde, 1 amarilla, 2 roja). Los campos que empiezan por `d` son el cambio respecto a la línea base (`dinc` es el ángulo entre la posición de referencia y la actual, siempre positivo), `inc_ok` y `dis_ok` indican si el MPU6050 y el extensómetro están conectados.
 
 Comandos, uno por línea, por USB o por Bluetooth:
 

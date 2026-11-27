@@ -1,5 +1,8 @@
 package co.edu.unal.monitoreo_km4
 
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
@@ -53,6 +56,38 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // El plugin esconde los emparejados que Android marca como Bluetooth LE;
+        // aquí se listan todos para que no desaparezca un módulo mal clasificado
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "km4/bluetooth")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "emparejados") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                try {
+                    result.success(emparejados())
+                } catch (e: SecurityException) {
+                    result.error("permiso", e.message, null)
+                }
+            }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun emparejados(): List<Map<String, String?>> {
+        val adaptador = getSystemService(BluetoothManager::class.java)?.adapter ?: return emptyList()
+        return adaptador.bondedDevices.orEmpty().map {
+            mapOf(
+                "direccion" to it.address,
+                "nombre" to it.name,
+                "tipo" to when (it.type) {
+                    BluetoothDevice.DEVICE_TYPE_CLASSIC -> "clasico"
+                    BluetoothDevice.DEVICE_TYPE_LE -> "le"
+                    BluetoothDevice.DEVICE_TYPE_DUAL -> "dual"
+                    else -> "desconocido"
+                },
+            )
+        }
     }
 
     private fun vibrar() {

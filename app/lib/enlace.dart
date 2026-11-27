@@ -15,7 +15,7 @@ abstract class Enlace {
 }
 
 class EnlaceBluetooth implements Enlace {
-  EnlaceBluetooth(String direccion) {
+  EnlaceBluetooth(String direccion, {this.ble = false}) {
     _link = FlutterClassicBluetooth().connectWithReconnect(
       address: direccion,
       policy: const BtcReconnectPolicy(
@@ -27,6 +27,12 @@ class EnlaceBluetooth implements Enlace {
   }
 
   late final BtcReconnectingConnection _link;
+
+  // Android ve el módulo como Bluetooth LE: si no conecta, lo más probable es
+  // que no sea un HC-05 clásico
+  final bool ble;
+  static const _avisoBle = 'No conecta. El celular reconoce este módulo como Bluetooth LE (BLE), '
+      'y la app usa Bluetooth clásico como el HC-05 original.';
 
   @override
   Stream<String> get lineas => _link.input
@@ -54,10 +60,10 @@ class EnlaceBluetooth implements Enlace {
         BtcConnectFailure.notPaired => 'El HC-05 no está emparejado con este celular',
         BtcConnectFailure.permissionDenied => 'Falta el permiso de Bluetooth',
         BtcConnectFailure.busy => 'El HC-05 está conectado a otro celular',
-        _ => 'No se encuentra el HC-05. ¿Está encendido el Arduino?',
+        _ => ble ? _avisoBle : 'No se encuentra el HC-05. ¿Está encendido el Arduino?',
       };
     }
-    return 'No se encuentra el HC-05. ¿Está encendido el Arduino?';
+    return ble ? _avisoBle : 'No se encuentra el HC-05. ¿Está encendido el Arduino?';
   }
 
   @override
