@@ -19,7 +19,7 @@ SoftwareSerial bluetooth(10, 11);
 
 const int PIN_HUMEDAD      = A0;
 const int PIN_EXTENSOMETRO = A1;
-const int PIN_LED_VERDE    = 2;
+const int PIN_LED_VERDE    = 5;
 const int PIN_LED_AMARILLO = 3;
 const int PIN_LED_ROJO     = 4;
 // MPU6050 por I2C: SDA = A4, SCL = A5

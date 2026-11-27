@@ -18,6 +18,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var sonidos: SoundPool? = null
+    private var enlaceBle: EnlaceBle? = null
     private var idAmarilla = 0
     private var idRoja = 0
 
@@ -56,6 +57,8 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        enlaceBle = EnlaceBle(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
 
         // El plugin esconde los emparejados que Android marca como Bluetooth LE;
         // aquí se listan todos para que no desaparezca un módulo mal clasificado
@@ -109,6 +112,8 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         sonidos?.release()
         sonidos = null
+        enlaceBle?.cerrar()
+        enlaceBle = null
         super.onDestroy()
     }
 }

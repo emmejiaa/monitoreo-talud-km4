@@ -41,7 +41,7 @@ class _Pintor extends CustomPainter {
   final Duration ventana;
 
   static const _izq = 34.0, _der = 8.0, _arriba = 8.0, _abajo = 20.0;
-  // MÃ¡s de esto sin datos se dibuja como un corte en la lÃ­nea
+  // Más de esto sin datos se dibuja como un corte en la línea
   static const _hueco = Duration(milliseconds: 3500);
 
   void _texto(Canvas canvas, String s, Offset pos, Color color, {bool derecha = false}) {
@@ -117,7 +117,7 @@ class _Pintor extends CustomPainter {
     if (visibles.isEmpty) {
       final tp = TextPainter(
         text: const TextSpan(
-          text: 'Esperando datosâ€¦',
+          text: 'Esperando datos…',
           style: TextStyle(fontSize: 13, color: Colores.textoSuave),
         ),
         textDirection: TextDirection.ltr,

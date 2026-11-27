@@ -38,7 +38,7 @@ Son los valores de fábrica. Se pueden cambiar desde la app o el dashboard sin r
 | Sensor de humedad del suelo (salida analógica) | A0 |
 | Extensómetro (potenciómetro lineal, 60 mm) | A1 |
 | MPU6050 / GY-521 | SDA → A4, SCL → A5, VCC → 5V |
-| LED verde / amarillo / rojo | 2 / 3 / 4 |
+| LED verde / amarillo / rojo | 5 / 3 / 4 |
 | HC-05 | TXD → 10, RXD → 11 (con divisor 1 kΩ + 2 kΩ) |
 
 El MPU6050 se lee directo por I2C, sin librerías, así que también funciona con los GY-521 clon que la librería de Adafruit rechaza. Es opcional: si no está conectado, el firmware sigue funcionando, la inclinación aparece como "N/D" y, si se conecta después o se suelta un cable, se detecta solo en unos segundos.
@@ -93,6 +93,7 @@ Si se pierde la conexión, se reconecta solo; con "Desconectar" se puede cambiar
 - Muestra el estado, los tres sensores y una gráfica de los últimos 3 minutos.
 - Las alertas suenan y la roja además vibra.
 - Tiene una bitácora de eventos y una pantalla para calibrar el sensor de humedad y cambiar los límites.
+- También funciona con módulos **Bluetooth LE** que se venden como HC-05 (HM-10, AT-09, JDY, HC-08 o con servicio UART de Nordic): si Android marca el módulo como Bluetooth LE, la app se conecta por BLE. El modo Bluetooth del dashboard solo sirve con el HC-05 clásico.
 - Incluye un **modo simulado** para probarla sin Arduino.
 - No funciona en iPhone, porque iOS no permite Bluetooth clásico.
 

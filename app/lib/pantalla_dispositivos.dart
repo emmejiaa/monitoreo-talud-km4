@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'alertas.dart';
 import 'enlace.dart';
+import 'enlace_ble.dart';
 import 'enlace_simulado.dart';
 import 'pantalla_monitor.dart';
 import 'tema.dart';
@@ -18,7 +19,7 @@ const claveTipo = 'hc05_tipo';
 PantallaMonitor crearPantallaMonitor(String direccion, String nombre, {bool ble = false}) =>
     PantallaMonitor(
       nombre: nombre,
-      crearEnlace: () => EnlaceBluetooth(direccion, ble: ble),
+      crearEnlace: () => ble ? EnlaceBle(direccion) : EnlaceBluetooth(direccion),
       alertas: AlertasAndroid(),
     );
 
